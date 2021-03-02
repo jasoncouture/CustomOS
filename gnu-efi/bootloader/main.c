@@ -35,14 +35,14 @@ EFI_FILE *LoadFile(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle, EF
 	return loadedFile;
 }
 
-int memcmp(const void *aptr, const void *bptr, size_t n)
+int memcmp(const void *leftPointer, const void *rightPointer, size_t size)
 {
-	const unsigned char *a = aptr, *b = bptr;
-	for (size_t i = 0; i < n; i++)
+	const unsigned char *left = leftPointer, *right = rightPointer;
+	for (size_t index = 0; index < size; index++)
 	{
-		if (a[i] < b[i])
+		if (left[index] < right[index])
 			return -1;
-		if (a[i] > b[i])
+		if (left[index] > right[index])
 			return 1;
 	}
 	return 0;
