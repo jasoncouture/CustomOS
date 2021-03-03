@@ -6,4 +6,4 @@ typedef struct
 	unsigned int Width;
 	unsigned int Height;
 	unsigned int PixelsPerScanLine;
-} FrameBuffer;
+}__attribute__((__packed__)) FrameBuffer;
