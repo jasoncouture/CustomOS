@@ -1,8 +1,5 @@
 #include <elf.h>
-// This is ugly, but the makefile is shit.
-// So, if someone feels like fixing it, we can go back to .h
-// otherwise, leave this alone, or it wont build.
-#include "graphics.c"
+#include "graphics.h"
 #include "../../common/include/framebuffer.h"
 #include "../../common/include/kernelparameters.h"
 typedef unsigned long long size_t;

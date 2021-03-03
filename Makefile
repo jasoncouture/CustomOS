@@ -20,14 +20,12 @@ kernel: $(KERNEL)
 $(KERNEL):
 	@ $(MAKE) -C kernel link
 
-diskimage: bootloader kernel 
+diskimage: $(OSIMAGE)
 
 clean:
 	@ $(MAKE) -C gnu-efi clean
 	@ $(MAKE) -C kernel clean
-
-winrun: all
-	@ $(MAKE) -C kernel winrun
+	@ rm -rfv $(BUILDDIR)/*
 
 dirs:
 	@ mkdir -p $(BUILDDIR)
