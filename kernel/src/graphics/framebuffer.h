@@ -19,3 +19,4 @@ typedef struct
 void kInitializeFrameBuffer(FrameBuffer* frameBuffer);
 
 KernelFrameBuffer *kGetFrameBuffer();
+void kSetPixel(unsigned int x, unsigned int y, unsigned int color);
