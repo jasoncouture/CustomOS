@@ -14,11 +14,11 @@ void _start(KernelParameters *kernelParameters)
 {
     kInitializeFromParameters(kernelParameters);
 
-    kPutCharacterWithColor('H', 0, 0, GREEN, BLACK);
-    kPutCharacterWithColor('e', 8, 0, GREEN, BLACK);
-    kPutCharacterWithColor('l', 16, 0, GREEN, BLACK);
-    kPutCharacterWithColor('l', 24, 0, GREEN, BLACK);
-    kPutCharacterWithColor('o', 32, 0, GREEN, BLACK);
-
+    kPutCharacter('H', 0, 0);
+    kPutCharacter('e', 8, 0);
+    kPutCharacter('l', 16, 0);
+    kPutCharacter('l', 24, 0);
+    kPutCharacter('o', 32, 0);
+    
     while(1);
 }
