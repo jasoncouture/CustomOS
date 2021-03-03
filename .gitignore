@@ -35,6 +35,9 @@
 
 # EFI ESP Images
 *.img
+*.tmp
 
 
 .vscode/
+kernel/bin/
+kernel/obj/

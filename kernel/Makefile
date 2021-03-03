@@ -23,6 +23,9 @@ SRC = $(call rwildcard,$(SRCDIR),*.c)
 OBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRC))
 DIRS = $(wildcard $(SRCDIR)/*)
 KERNEL = $(BUILDDIR)/kernel.elf
+FONT = $(BUILDDIR)/zap-light16.psf
+OSIMAGE = $(BUILDDIR)/$(OSNAME).img
+OSIMAGETEMP = $(OSIMAGE).tmp
 
 all: buildimage
 
@@ -31,32 +34,43 @@ setup:
 	@mkdir -p $(SRCDIR)
 	@mkdir -p $(OBJDIR)
 
-build: link
+build: $(OBJS)
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@ echo === COMPILING $^
 	@ mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $^ -o $@
+	@ $(CC) $(CFLAGS) -c $^ -o $@
 
 $(KERNEL): $(OBJS)
-	@ echo === LINKING
-	$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
+	@ echo === LINKING $(OBJS)
+	@ $(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
+
+$(FONT):
+	@ echo === Creating $(FONT)
+	@ cp zap-light16.psf $(FONT)
 	
 link: $(KERNEL)
 
-buildimage: $(KERNEL)
-	@ echo === Building disk image $(BUILDDIR)/$(OSNAME).img
-	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img bs=512 count=93750
-	mformat -i $(BUILDDIR)/$(OSNAME).img -f 2880 ::
-	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI
-	mmd -i $(BUILDDIR)/$(OSNAME).img ::/EFI/BOOT
-	mcopy -i $(BUILDDIR)/$(OSNAME).img $(BOOTEFI) ::/EFI/BOOT
-	mcopy -i $(BUILDDIR)/$(OSNAME).img startup.nsh ::
-	mcopy -i $(BUILDDIR)/$(OSNAME).img $(KERNEL) ::
+buildimage: $(KERNEL) $(FONT) $(OSIMAGE)
 
-run:
+
+$(OSIMAGE):
+	@ echo === Building disk image $(OSIMAGE)
+	@ dd if=/dev/zero of=$(OSIMAGETEMP) bs=16384 count=4096
+	@ echo === Formatting $(OSIMAGE)
+	@ mkfs -t fat -F 32 -n "EFI_SYSTEM" -v $(OSIMAGETEMP)
+	@ echo === Creating /EFI/BOOT in $(OSIMAGE)
+	@ mmd -i $(OSIMAGETEMP) ::/EFI ::/EFI/BOOT
+	@ echo === Copying $(BOOTEFI) to /EFI/BOOT in $(OSIMAGE)
+	@ mcopy -i $(OSIMAGETEMP) $(BOOTEFI) ::/EFI/BOOT
+	@ echo === Copying startup.nsh, $(KERNEL), $(FONT) to / in $(OSIMAGE)
+	@ mcopy -i $(OSIMAGETEMP) startup.nsh $(KERNEL) $(FONT) ::
+	@ mv $(OSIMAGETEMP) $(OSIMAGE)
+
+run: $(OSIMAGE)
 	qemu-system-x86_64 -drive file=$(BUILDDIR)/$(OSNAME).img -m 256M -cpu qemu64 -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
 
-winrun:
+winrun: $(OSIMAGE)
 	@ ./run.bat
 
 clean: clean-build clean-objs
