@@ -53,10 +53,8 @@ EFI_STATUS BootFailed()
 	return EFI_LOAD_ERROR;
 }
 
-EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
+EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 {
-	InitializeLib(imageHandle, systemTable);
-	Print(L"UEFI Library initializtion successful.\r\n");
 	EFI_FILE *kernel = LoadFile(NULL, L"kernel.elf", imageHandle, systemTable);
 	if (kernel == NULL)
 	{
@@ -155,6 +153,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 			int segmentPagesRequired = (programHeader->p_memsz + 0x1000 + 1) / 0x1000; // Route memory size up to the nearest page boundary.
 			Elf64_Addr segment = programHeader->p_paddr;
 			Print(L"Loading segment: %016x\r\n", programHeader->p_paddr);
+			
 			systemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, segmentPagesRequired, &segment); // Allocate the required pages
 
 			kernel->SetPosition(kernel, programHeader->p_offset); // Seek to the appropriate location in the kernel
@@ -169,8 +168,60 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 
 	Print(L"Kernel loaded, executing entrypoint at address: %012x\r\n", header.e_entry);
 
-	// Create function pointer into loaded kernel.
-	KernelStart kernelStart = (KernelStart)header.e_entry;
+	*kernelStart = header.e_entry;
+	return EFI_SUCCESS;
+}
+
+Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
+{
+	EFI_FILE *font = LoadFile(directory, path, imageHandle, systemTable);
+	if (font == NULL)
+	{
+		return NULL;
+	}
+
+	FontHeader* fontHeader;
+	UINTN size = sizeof(FontHeader);
+	systemTable->BootServices->AllocatePool(EfiLoaderData, size, (void**)&fontHeader);
+	font->Read(font, &size, fontHeader);
+	unsigned char expectedMagic[2] = { PSF1_MAGIC0, PSF1_MAGIC1 };
+	if(memcmp(fontHeader->Magic, expectedMagic, 2)) {
+		return NULL;
+	}
+	// Mode 1 has 512 glyphs, otherwise 256
+	UINTN glyphBufferSize = fontHeader->CharacterSize * (fontHeader->Mode == 1 ? 512 : 256);
+
+	void* glyphBuffer;
+	systemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void**)&glyphBuffer);
+	size = sizeof(FontHeader);
+	font->SetPosition(font, size);
+	font->Read(font, &glyphBufferSize, glyphBuffer);
+	Font* returnValue;
+
+	systemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(Font), (void**)&returnValue);
+	returnValue->Header = fontHeader;
+	returnValue->GlyphBuffer = glyphBuffer;
+	return returnValue;
+}
+
+EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
+{
+	InitializeLib(imageHandle, systemTable);
+	Print(L"UEFI Library initializtion successful.\r\n");
+
+	uint64_t kernelStartAddress;
+	Font* consoleFont = LoadFont(NULL, L"zap-light16.psf", imageHandle, systemTable);
+	if(consoleFont == NULL) {
+		Print(L"System console font was not found, or invalid!\r\n");
+		return EFI_NOT_FOUND;
+	}
+	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
+	Print(L"Glyph buffer location: 0x%016x", consoleFont->GlyphBuffer);
+	EFI_STATUS kernelLoadStatus = LoadKernelEntry(&kernelStartAddress, imageHandle, systemTable);
+	if (kernelLoadStatus != EFI_SUCCESS)
+	{
+		return kernelLoadStatus;
+	}
 
 	FrameBuffer *frameBuffer = InitializeGraphics();
 	Print(L"Base: 0x%016X\r\nSize %d\r\nWidth: %d\r\nHeight: %d\r\nPixels per scan line: %d\r\nPixel format: %d\r\n\r\n", frameBuffer->BaseAddress, frameBuffer->Size, frameBuffer->Width, frameBuffer->Height, frameBuffer->PixelsPerScanLine, frameBuffer->PixelFormat);
@@ -178,9 +229,12 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	// Setup the frame buffer. If it fails, oh well, no graphics for you.
 	KernelParameters *kernelParameters = &gKernelParameters;
 	kernelParameters->FrameBuffer = frameBuffer;
-	// Skip this for now, to debug graphics.
+	kernelParameters->Font = consoleFont;
 	// Transfer execution to the kernel.
+	KernelStart kernelStart = (KernelStart)kernelStartAddress;
 	kernelStart(kernelParameters);
+
+	//Print(L"Kernel returned: %d", returnValue);
 
 	// We should exit boot services here, before entering the kernel, as we've done our job.
 	// but we're not quite ready yet. we don't have a memory map setup yet.

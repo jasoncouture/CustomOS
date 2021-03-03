@@ -7,7 +7,7 @@ LDS = kernel.ld
 CC = gcc
 LD = ld
 
-CFLAGS = -ffreestanding -fshort-wchar
+CFLAGS = -ffreestanding -fshort-wchar -fno-inline
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib
 
 
