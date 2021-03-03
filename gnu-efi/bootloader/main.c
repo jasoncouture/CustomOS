@@ -6,7 +6,7 @@
 #include "../../common/include/framebuffer.h"
 #include "../../common/include/kernelparameters.h"
 typedef unsigned long long size_t;
-typedef int __attribute__((sysv_abi)) (*KernelStart)(KernelParameters *);
+typedef void __attribute__((sysv_abi)) (*KernelStart)(KernelParameters *);
 KernelParameters gKernelParameters;
 
 EFI_FILE *LoadFile(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
@@ -173,14 +173,14 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	KernelStart kernelStart = (KernelStart)header.e_entry;
 
 	FrameBuffer *frameBuffer = InitializeGraphics();
-	Print(L"Base: 0x%016X\r\nSize %d\r\nWidth: %d\r\nHeight: %d\r\nPixels per scan line: %d\r\n\r\n", frameBuffer->BaseAddress, frameBuffer->Size, frameBuffer->Width, frameBuffer->Height, frameBuffer->PixelsPerScanLine);
+	Print(L"Base: 0x%016X\r\nSize %d\r\nWidth: %d\r\nHeight: %d\r\nPixels per scan line: %d\r\nPixel format: %d\r\n\r\n", frameBuffer->BaseAddress, frameBuffer->Size, frameBuffer->Width, frameBuffer->Height, frameBuffer->PixelsPerScanLine, frameBuffer->PixelFormat);
 
 	// Setup the frame buffer. If it fails, oh well, no graphics for you.
 	KernelParameters *kernelParameters = &gKernelParameters;
 	kernelParameters->FrameBuffer = frameBuffer;
 	// Skip this for now, to debug graphics.
 	// Transfer execution to the kernel.
-	int kernelReturnValue = kernelStart(kernelParameters);
+	kernelStart(kernelParameters);
 
 	// We should exit boot services here, before entering the kernel, as we've done our job.
 	// but we're not quite ready yet. we don't have a memory map setup yet.
@@ -188,7 +188,6 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	// Early in development, we'll allow kernel returns, in the future we'll return void from the kernel, and if we get here
 	// we'll ask EFI to reboot the machine, and failing that, we'll drop to assembly and execute HLT because something is
 	// horribly, HORRIBLY wrong.
-	Print(L"Kernel returned: %d\r\n", kernelReturnValue);
 
 	//systemTable->RuntimeServices->ResetSystem(EfiResetWarm, EFI_SUCCESS, 0, NULL);
 	/* If this code gets hit, your EFI implementation is horribly broken. :) */

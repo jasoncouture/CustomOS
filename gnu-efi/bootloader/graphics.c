@@ -23,5 +23,6 @@ FrameBuffer *InitializeGraphics()
 	gFrameBuffer.Width = graphics->Mode->Info->HorizontalResolution;
 	gFrameBuffer.Height = graphics->Mode->Info->VerticalResolution;
 	gFrameBuffer.PixelsPerScanLine = graphics->Mode->Info->PixelsPerScanLine;
+	gFrameBuffer.PixelFormat = graphics->Mode->Info->PixelFormat;
 	return &gFrameBuffer;
 }

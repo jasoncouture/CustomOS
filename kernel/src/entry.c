@@ -1,37 +1,59 @@
 #include <stddef.h>
 #include "../../common/include/kernelparameters.h"
+#include "graphics/framebuffer.h"
 
-typedef unsigned int COLOR;
 
-void DrawPixel(FrameBuffer *frameBuffer, unsigned int x, unsigned int y, COLOR color)
+void DirectWritePixel(uint8_t* buffer, uint8_t* colorDataBuffer, KernelFrameBuffer* kernelFrameBuffer) 
 {
-    if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL)
-        return;
-    const unsigned long long bytesPerPixel = 4;
-    unsigned int *bufferPointer = frameBuffer->BaseAddress;
-    *(COLOR *)((x * bytesPerPixel) + (y * bytesPerPixel * frameBuffer->PixelsPerScanLine) + frameBuffer->BaseAddress) = color;
+    if((kernelFrameBuffer->RedPosition / 8) < kernelFrameBuffer->BytesPerPixel) 
+    {
+        buffer[kernelFrameBuffer->RedPosition / 8] = colorDataBuffer[0]; // Red
+    }
+    if((kernelFrameBuffer->GreenPosition / 8) < kernelFrameBuffer->BytesPerPixel) 
+    {
+        buffer[kernelFrameBuffer->GreenPosition / 8] = colorDataBuffer[1]; // Red
+    }
+    if((kernelFrameBuffer->BluePosition / 8) < kernelFrameBuffer->BytesPerPixel) 
+    {
+        buffer[kernelFrameBuffer->BluePosition / 8] = colorDataBuffer[2]; // Red
+    }
 }
 
-int _start(KernelParameters *kernelParameters)
+void DrawPixel(unsigned int x, unsigned int y, unsigned int color)
 {
-    return kernelParameters->FrameBuffer->PixelsPerScanLine * kernelParameters->FrameBuffer->Height * 4;
-    COLOR colors[] = {0xFF0000FF, 0x00FF00FF, 0x0000FFFF};
+    KernelFrameBuffer *kernelFrameBuffer = kGetFrameBuffer();
+    FrameBuffer* frameBuffer = kernelFrameBuffer->FrameBuffer;
+    if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || kernelFrameBuffer->BytesPerPixel == 0)
+        return;
+    unsigned long long xOffset = x * kernelFrameBuffer->BytesPerPixel;
+    // y * width + x = offset
+    // In this case, * bytes per pixel
+    // Cast to a unsigned int (32 bit) pointer
+    // Dereferenced, and assigned the value provided
+    uint8_t *colorData = &color;
+    uint8_t *buffer = (uint8_t *)(xOffset + (y * kernelFrameBuffer->BytesPerPixel * frameBuffer->PixelsPerScanLine) + frameBuffer->BaseAddress);
+
+    DirectWritePixel(buffer, colorData, kernelFrameBuffer);
+}
+
+
+
+
+void _start(KernelParameters *kernelParameters)
+{
+    kInitializeFrameBuffer(kernelParameters->FrameBuffer);
+    unsigned int colors[3] = {0xFF00FF00, 0xFF0000FF, 0xFFFF0000};
     unsigned int colorIndex = 0;
-    FrameBuffer frameBuffer = *(kernelParameters->FrameBuffer);
     while (1)
     {
+        unsigned int selectedColor = colors[colorIndex];
         colorIndex = (colorIndex + 1) % 3;
-        COLOR selectedColor = colors[colorIndex];
-        for (int y = 50; y < frameBuffer.Height - 60; y++)
+        for (unsigned int y = 0; y < kernelParameters->FrameBuffer->Height; y++)
         {
-            for (int x = 50; x < frameBuffer.Width - 60; x++)
+            for (unsigned int x = 0; x < kernelParameters->FrameBuffer->Width; x++)
             {
-                DrawPixel(&frameBuffer, x, y, selectedColor);
-                for (int z = 0; z < 10000; z++)
-                    ;
+                DrawPixel(x, y, selectedColor);
             }
         }
     }
-    // UNREACHABLE CODE DETECTED?!?! WHAT WILL WE EVER DO!?!?!
-    return 124;
 }
