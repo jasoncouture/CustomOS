@@ -7,15 +7,15 @@ void DirectWritePixel(uint8_t* buffer, uint8_t* colorDataBuffer, KernelFrameBuff
 {
     if((kernelFrameBuffer->RedPosition / 8) < kernelFrameBuffer->BytesPerPixel) 
     {
-        buffer[kernelFrameBuffer->RedPosition / 8] = colorDataBuffer[0]; // Red
+        buffer[kernelFrameBuffer->RedPosition / 8] = colorDataBuffer[0];
     }
     if((kernelFrameBuffer->GreenPosition / 8) < kernelFrameBuffer->BytesPerPixel) 
     {
-        buffer[kernelFrameBuffer->GreenPosition / 8] = colorDataBuffer[1]; // Red
+        buffer[kernelFrameBuffer->GreenPosition / 8] = colorDataBuffer[1];
     }
     if((kernelFrameBuffer->BluePosition / 8) < kernelFrameBuffer->BytesPerPixel) 
     {
-        buffer[kernelFrameBuffer->BluePosition / 8] = colorDataBuffer[2]; // Red
+        buffer[kernelFrameBuffer->BluePosition / 8] = colorDataBuffer[2];
     }
 }
 
