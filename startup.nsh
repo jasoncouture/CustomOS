@@ -1,4 +1,5 @@
 @echo -off
+# This is an EFI Shell Script, the purpose of this script is to locate and excute our bootloader (main.efi)
 mode 80 25
 
 cls
