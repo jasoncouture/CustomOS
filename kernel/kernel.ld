@@ -1,6 +1,5 @@
 OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(_start)
-. = 0x10000;
 SECTIONS
 {
     _KernelStart = .;
