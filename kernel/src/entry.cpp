@@ -2,7 +2,6 @@
 #include "../../common/include/kernelparameters.h"
 #include "graphics/framebuffer.hpp"
 #include "console/font.hpp"
-#include "init.h"
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -12,15 +11,9 @@
 
 extern "C" void _start(KernelParameters *kernelParameters)
 {
-    kInitializeFromParameters(kernelParameters);
-    KernelFrameBuffer *frameBuffer = KernelFrameBuffer::GetInstance();
-    KernelConsoleFont *font = KernelConsoleFont::GetInstance();
-    font->DrawCharacterAt('H', 0, 0, GREEN, BLACK);
-    frameBuffer->Clear(BLUE);
-    font->DrawCharacterAt('e', 8, 0, GREEN, BLACK);
-    font->DrawCharacterAt('l', 16, 0, GREEN, BLACK);
-    font->DrawCharacterAt('l', 24, 0, GREEN, BLACK);
-    font->DrawCharacterAt('o', 32, 0, GREEN, BLACK);
-    frameBuffer->Clear(GREEN);
+    KernelFrameBuffer::InitializeInstance(kernelParameters->FrameBuffer);
+    KernelConsoleFont *font = KernelConsoleFont::InitializeInstance(kernelParameters->Font);
+    font->DrawStringAt("Booting kernel (Early init)", 0, 0);
+    font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight());
     while(1);
 }

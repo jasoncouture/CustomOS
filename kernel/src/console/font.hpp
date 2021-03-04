@@ -1,18 +1,22 @@
 #pragma once
 #include "../graphics/framebuffer.hpp"
 #include "../../../common/include/font.h"
+#include "zap-light-16.hpp"
+
 class KernelConsoleFont {
     private:
         unsigned int foregroundColor = 0x0000FF00;
         unsigned int backgroundColor = 0x00000000;
-        Font* font = 0;
         KernelFrameBuffer* surface;
+        Font* font;
 
         KernelConsoleFont();
-        static KernelConsoleFont instance;
+        static Font FontInstance;
+        static KernelConsoleFont Instance;
     
     public:
-        static void InitializeInstance(Font* font, KernelFrameBuffer* kernelFrameBuffer);
+        static KernelConsoleFont* InitializeInstance();
+        static KernelConsoleFont* InitializeInstance(Font* font);
         static KernelConsoleFont* GetInstance();
 
         KernelConsoleFont(Font* font, KernelFrameBuffer* kernelFrameBuffer);
@@ -23,7 +27,13 @@ class KernelConsoleFont {
         unsigned int GetCharacterPixelWidth();
         unsigned int GetCharacterPixelHeight();
 
-        void DrawCharacterAt(unsigned char character, unsigned int x, unsigned int y);
-        void DrawCharacterAt(unsigned char character, unsigned int x, unsigned int y, unsigned int color);
-        void DrawCharacterAt(unsigned char character, unsigned int x, unsigned int y, unsigned int foregroundColor, unsigned int backgroundColor);
+        void DrawCharacterAt(const unsigned char character, const unsigned int x, const unsigned int y);
+        void DrawCharacterAt(const unsigned char character, const unsigned int x, const unsigned int y, const unsigned int color);
+        void DrawCharacterAt(const unsigned char character, const unsigned int x, const unsigned int y, const unsigned int foregroundColor, const unsigned int backgroundColor);
+
+        void DrawStringAt(const char* character, const unsigned int x, const unsigned int y);
+        void DrawStringAt(const char* character, const unsigned int x, const unsigned int y, const unsigned int color);
+        void DrawStringAt(const char* character, const unsigned int x, const unsigned int y, const unsigned int foregroundColor, const unsigned int backgroundColor);
+        
+
 };
