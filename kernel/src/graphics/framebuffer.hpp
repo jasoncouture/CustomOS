@@ -28,8 +28,10 @@ class KernelFrameBuffer
 
     public:
         KernelFrameBuffer(FrameBuffer* frameBuffer);
-        void SetPixel(unsigned int x, unsigned int y, unsigned int color);
-        void Clear(unsigned int color);
+        unsigned int GetWidth();
+        unsigned int GetHeight();
+        void SetPixel(const unsigned int x, const unsigned int y, const unsigned int color);
+        void Clear(const unsigned int color);
         static KernelFrameBuffer* GetInstance();
         static KernelFrameBuffer* InitializeInstance(FrameBuffer* frameBuffer);
 };

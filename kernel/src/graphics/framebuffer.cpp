@@ -91,24 +91,25 @@ KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
     InitializeKernelFrameBuffer(frameBuffer, &this->kFrameBufferInfo);
 }
 
-void KernelFrameBuffer::SetPixel(unsigned int x, unsigned int y, unsigned int color)
+void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, const unsigned int color)
 {
+
     KernelFrameBufferInfo *kernelFrameBuffer = &this->kFrameBufferInfo;
     FrameBuffer *frameBuffer = kernelFrameBuffer->FrameBuffer;
     if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || kernelFrameBuffer->BytesPerPixel == 0)
         return;
-    unsigned long long xOffset = x * kernelFrameBuffer->BytesPerPixel;
     // y * width + x = offset
     // In this case, * bytes per pixel
     // Cast to a unsigned int (32 bit) pointer
     // Dereferenced, and assigned the value provided
-    uint8_t *colorData = (uint8_t *)&color;
-    uint8_t *buffer = (uint8_t *)(xOffset + (y * kernelFrameBuffer->BytesPerPixel * frameBuffer->PixelsPerScanLine) + (char *)frameBuffer->BaseAddress);
+    unsigned int localColor = color;
+    uint8_t *colorData = (uint8_t *)&localColor;
+    uint8_t *buffer = (uint8_t *)((x * kernelFrameBuffer->BytesPerPixel) + (y * kernelFrameBuffer->BytesPerPixel * frameBuffer->PixelsPerScanLine) + (char *)frameBuffer->BaseAddress);
 
     DirectWritePixel(buffer, colorData, kernelFrameBuffer);
 }
 
-void KernelFrameBuffer::Clear(unsigned int color)
+void KernelFrameBuffer::Clear(const unsigned int color)
 {
     for (unsigned int y = 0; y < this->kFrameBufferInfo.FrameBuffer->Height; y++)
     {
@@ -117,4 +118,12 @@ void KernelFrameBuffer::Clear(unsigned int color)
             this->SetPixel(x, y, color);
         }
     }
+}
+
+unsigned int KernelFrameBuffer::GetWidth() {
+    return this->kFrameBufferInfo.FrameBuffer->Width;
+}
+
+unsigned int KernelFrameBuffer::GetHeight() {
+    return this->kFrameBufferInfo.FrameBuffer->Height;
 }
