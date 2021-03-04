@@ -1,4 +1,4 @@
-#include "framebuffer.h"
+#include "framebuffer.hpp"
 #include <stddef.h>
 #define PIXEL_FORMAT_RGB_RESERVED_8BIT_PER_COLOR 0
 #define PIXEL_FORMAT_BGR_RESERVED_8BIT_PER_COLOR 1
@@ -6,11 +6,8 @@
 #define PIXEL_BLT_ONLY 3
 #define PIXEL_FORMAT_MAX 4
 
-KernelFrameBuffer gKernelFrameBuffer;
-
-void kInitializeFrameBuffer(FrameBuffer *frameBuffer)
+void InitializeKernelFrameBuffer(FrameBuffer *frameBuffer, KernelFrameBufferInfo *kernelFrameBuffer)
 {
-    KernelFrameBuffer* kernelFrameBuffer = &gKernelFrameBuffer;
     kernelFrameBuffer->FrameBuffer = frameBuffer;
     if (kernelFrameBuffer->FrameBuffer == NULL)
     {
@@ -56,12 +53,24 @@ void kInitializeFrameBuffer(FrameBuffer *frameBuffer)
     }
 }
 
-KernelFrameBuffer *kGetFrameBuffer()
+KernelFrameBuffer KernelFrameBuffer::GlobalSurface;
+
+KernelFrameBuffer *KernelFrameBuffer::InitializeInstance(FrameBuffer *frameBuffer)
 {
-    return &gKernelFrameBuffer;
+    GlobalSurface = KernelFrameBuffer(frameBuffer);
+    return GetInstance();
 }
 
-void DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBuffer *kernelFrameBuffer)
+KernelFrameBuffer *KernelFrameBuffer::GetInstance()
+{
+    return &KernelFrameBuffer::GlobalSurface;
+}
+
+KernelFrameBuffer::KernelFrameBuffer()
+{
+}
+
+void KernelFrameBuffer::DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBufferInfo *kernelFrameBuffer)
 {
     if ((kernelFrameBuffer->RedPosition / 8) < kernelFrameBuffer->BytesPerPixel)
     {
@@ -77,9 +86,14 @@ void DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBuff
     }
 }
 
-void kSetPixel(unsigned int x, unsigned int y, unsigned int color)
+KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
 {
-    KernelFrameBuffer *kernelFrameBuffer = &gKernelFrameBuffer;
+    InitializeKernelFrameBuffer(frameBuffer, &this->kFrameBufferInfo);
+}
+
+void KernelFrameBuffer::SetPixel(unsigned int x, unsigned int y, unsigned int color)
+{
+    KernelFrameBufferInfo *kernelFrameBuffer = &this->kFrameBufferInfo;
     FrameBuffer *frameBuffer = kernelFrameBuffer->FrameBuffer;
     if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || kernelFrameBuffer->BytesPerPixel == 0)
         return;
@@ -88,8 +102,19 @@ void kSetPixel(unsigned int x, unsigned int y, unsigned int color)
     // In this case, * bytes per pixel
     // Cast to a unsigned int (32 bit) pointer
     // Dereferenced, and assigned the value provided
-    void *colorData = &color;
-    void *buffer = (uint8_t *)(xOffset + (y * kernelFrameBuffer->BytesPerPixel * frameBuffer->PixelsPerScanLine) + frameBuffer->BaseAddress);
+    uint8_t *colorData = (uint8_t *)&color;
+    uint8_t *buffer = (uint8_t *)(xOffset + (y * kernelFrameBuffer->BytesPerPixel * frameBuffer->PixelsPerScanLine) + (char *)frameBuffer->BaseAddress);
 
     DirectWritePixel(buffer, colorData, kernelFrameBuffer);
+}
+
+void KernelFrameBuffer::Clear(unsigned int color)
+{
+    for (unsigned int y = 0; y < this->kFrameBufferInfo.FrameBuffer->Height; y++)
+    {
+        for (unsigned int x = 0; x < this->kFrameBufferInfo.FrameBuffer->Width; x++)
+        {
+            this->SetPixel(x, y, color);
+        }
+    }
 }

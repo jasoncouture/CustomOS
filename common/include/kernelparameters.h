@@ -2,8 +2,8 @@
 #include "framebuffer.h"
 #include "font.h"
 
-typedef struct
+struct KernelParameters
 {
-	FrameBuffer *FrameBuffer;
-	Font *Font;
-} __attribute__((__packed__)) KernelParameters;
+	struct FrameBuffer *FrameBuffer;
+	struct Font *Font;
+};

@@ -3,8 +3,8 @@
 #include "../../common/include/framebuffer.h"
 #include "../../common/include/kernelparameters.h"
 typedef unsigned long long size_t;
-typedef void __attribute__((sysv_abi)) (*KernelStart)(struct KernelParameters *);
-struct KernelParameters gKernelParameters;
+typedef void __attribute__((sysv_abi)) (*KernelStart)(KernelParameters *);
+KernelParameters gKernelParameters;
 
 EFI_FILE *LoadFile(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 {
@@ -150,7 +150,7 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 			int segmentPagesRequired = (programHeader->p_memsz + 0x1000 + 1) / 0x1000; // Route memory size up to the nearest page boundary.
 			Elf64_Addr segment = programHeader->p_paddr;
 			Print(L"Loading segment: %016x\r\n", programHeader->p_paddr);
-			
+
 			systemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, segmentPagesRequired, &segment); // Allocate the required pages
 
 			kernel->SetPosition(kernel, programHeader->p_offset); // Seek to the appropriate location in the kernel
@@ -169,7 +169,7 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 	return EFI_SUCCESS;
 }
 
-struct Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
+Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 {
 	EFI_FILE *font = LoadFile(directory, path, imageHandle, systemTable);
 	if (font == NULL)
@@ -177,8 +177,8 @@ struct Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle,
 		return NULL;
 	}
 
-	struct FontHeader* fontHeader;
-	UINTN size = sizeof(struct FontHeader);
+	FontHeader* fontHeader;
+	UINTN size = sizeof(FontHeader);
 	systemTable->BootServices->AllocatePool(EfiLoaderData, size, (void**)&fontHeader);
 	font->Read(font, &size, fontHeader);
 	unsigned char expectedMagic[2] = { PSF1_MAGIC0, PSF1_MAGIC1 };
@@ -190,12 +190,12 @@ struct Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle,
 
 	void* glyphBuffer;
 	systemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void**)&glyphBuffer);
-	size = sizeof(struct FontHeader);
+	size = sizeof(FontHeader);
 	font->SetPosition(font, size);
 	font->Read(font, &glyphBufferSize, glyphBuffer);
-	struct Font* returnValue;
+	Font* returnValue;
 
-	systemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(struct Font), (void**)&returnValue);
+	systemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(Font), (void**)&returnValue);
 	returnValue->Header = fontHeader;
 	returnValue->GlyphBuffer = glyphBuffer;
 	return returnValue;
@@ -207,23 +207,24 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	Print(L"UEFI Library initializtion successful.\r\n");
 
 	uint64_t kernelStartAddress;
-	struct Font* consoleFont = LoadFont(NULL, L"zap-light16.psf", imageHandle, systemTable);
+	Font* consoleFont = LoadFont(NULL, L"zap-light16.psf", imageHandle, systemTable);
 	if(consoleFont == NULL) {
 		Print(L"System console font was not found, or invalid!\r\n");
 		return EFI_NOT_FOUND;
 	}
 	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
-	Print(L"Glyph buffer location: 0x%016x\r\n", consoleFont->GlyphBuffer);
+	Print(L"Glyph buffer location: 0x%016x", consoleFont->GlyphBuffer);
 	EFI_STATUS kernelLoadStatus = LoadKernelEntry(&kernelStartAddress, imageHandle, systemTable);
 	if (kernelLoadStatus != EFI_SUCCESS)
 	{
 		return kernelLoadStatus;
 	}
 
-	struct FrameBuffer *frameBuffer = InitializeGraphics();
+	FrameBuffer *frameBuffer = InitializeGraphics();
 	Print(L"Base: 0x%016X\r\nSize %d\r\nWidth: %d\r\nHeight: %d\r\nPixels per scan line: %d\r\nPixel format: %d\r\n\r\n", frameBuffer->BaseAddress, frameBuffer->Size, frameBuffer->Width, frameBuffer->Height, frameBuffer->PixelsPerScanLine, frameBuffer->PixelFormat);
+
 	// Setup the frame buffer. If it fails, oh well, no graphics for you.
-	struct KernelParameters *kernelParameters = &gKernelParameters;
+	KernelParameters *kernelParameters = &gKernelParameters;
 	kernelParameters->FrameBuffer = frameBuffer;
 	kernelParameters->Font = consoleFont;
 	// Transfer execution to the kernel.

@@ -1,5 +1,5 @@
 #pragma once
-typedef struct
+struct FrameBuffer
 {
 	void *BaseAddress;
 	unsigned long long Size;
@@ -7,4 +7,4 @@ typedef struct
 	unsigned int Height;
 	unsigned int PixelsPerScanLine;
 	unsigned int PixelFormat;
-}__attribute__((__packed__)) FrameBuffer;
+};

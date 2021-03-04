@@ -2,9 +2,9 @@
 #include <efi.h>
 #include <efilib.h>
 #include "../../common/include/framebuffer.h"
-FrameBuffer gFrameBuffer;
+struct FrameBuffer gFrameBuffer;
 
-FrameBuffer *InitializeGraphics()
+struct FrameBuffer *InitializeGraphics()
 {
 	EFI_GUID graphicsGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
 	EFI_GRAPHICS_OUTPUT_PROTOCOL *graphics;

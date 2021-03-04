@@ -5,11 +5,12 @@ GNUEFI = ../gnu-efi
 OVMFDIR = ../OVMFbin
 LDS = kernel.ld
 CC = gcc
+ASMC = nasm
 LD = ld
 
 CFLAGS = -ffreestanding -fshort-wchar -fno-inline
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib
-
+ASMFLAGS = -f elf64
 
 
 SRCDIR := src
@@ -19,11 +20,13 @@ BOOTEFI := $(GNUEFI)/x86_64/bootloader/main.efi
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
+ASMSRC = $(call rwildcard,$(SRCDIR),*.s)
 SRC = $(call rwildcard,$(SRCDIR),*.c)
-CPPSRC = $(call rwildcard,$(SRCDIR),*.cpp)          
+CPPSRC = $(call rwildcard,$(SRCDIR),*.cpp)
+ASMOBJS = $(patsubst $(SRCDIR)/%.s, $(OBJDIR)/%_asm.o, $(ASMSRC))
 COBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRC))
 CPPOBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(CPPSRC))
-OBJS = $(COBJS) $(CPPOBJS)
+OBJS = $(COBJS) $(CPPOBJS) $(ASMOBJS)
 DIRS = $(wildcard $(SRCDIR)/*)
 KERNEL = $(BUILDDIR)/kernel.elf
 FONT = $(BUILDDIR)/zap-light16.psf
@@ -39,6 +42,11 @@ setup:
 
 build: $(OBJS)
 
+$(OBJDIR)/%_asm.o: $(SRCDIR)/%.s
+	@ echo === ASSEMBLING $^
+	@ mkdir -p $(@D)
+	@ $(AS) $(AFLAGS) $^ -o $@
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@ echo === COMPILING $^
 	@ mkdir -p $(@D)
@@ -52,6 +60,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 $(KERNEL): $(OBJS)
 	@ echo === LINKING $(OBJS)
 	@ $(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
+	@ strip $(KERNEL)
 	
 link: $(KERNEL)
 

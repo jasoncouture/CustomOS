@@ -1,22 +1,22 @@
 OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(_start)
-
+. = 0x10000;
 SECTIONS
 {
     _KernelStart = .;
-    .text : ALIGN(0x1000)
+    .text : ALIGN(4K)
     {
         *(.text)
     }
-    .data : ALIGN(0x1000)
+    .data : ALIGN(4K)
     {
         *(.data)
     }
-    .rodata : ALIGN(0x1000)
+    .rodata : ALIGN(4K)
     {
         *(.rodata)
     }
-    .bss : ALIGN(0x1000)
+    .bss : ALIGN(4K)
     {
         *(COMMON)
         *(.bss)
