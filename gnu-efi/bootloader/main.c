@@ -190,9 +190,11 @@ struct Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle,
 
 	void* glyphBuffer;
 	systemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void**)&glyphBuffer);
+	Print(L"Allocated %d bytes for the glpyh buffer pool at %016x\r\n", glyphBufferSize, glyphBuffer);
 	size = sizeof(struct FontHeader);
 	font->SetPosition(font, size);
 	font->Read(font, &glyphBufferSize, glyphBuffer);
+	
 	struct Font* returnValue;
 
 	systemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(struct Font), (void**)&returnValue);
@@ -207,13 +209,6 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	Print(L"UEFI Library initializtion successful.\r\n");
 
 	uint64_t kernelStartAddress;
-	struct Font* consoleFont = LoadFont(NULL, L"zap-light16.psf", imageHandle, systemTable);
-	if(consoleFont == NULL) {
-		Print(L"System console font was not found, or invalid!\r\n");
-		return EFI_NOT_FOUND;
-	}
-	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
-	Print(L"Glyph buffer location: 0x%016x\r\n", consoleFont->GlyphBuffer);
 	EFI_STATUS kernelLoadStatus = LoadKernelEntry(&kernelStartAddress, imageHandle, systemTable);
 	if (kernelLoadStatus != EFI_SUCCESS)
 	{
@@ -222,6 +217,13 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 
 	struct FrameBuffer *frameBuffer = InitializeGraphics();
 	Print(L"Base: 0x%016X\r\nSize %d\r\nWidth: %d\r\nHeight: %d\r\nPixels per scan line: %d\r\nPixel format: %d\r\n\r\n", frameBuffer->BaseAddress, frameBuffer->Size, frameBuffer->Width, frameBuffer->Height, frameBuffer->PixelsPerScanLine, frameBuffer->PixelFormat);
+	struct Font* consoleFont = LoadFont(NULL, L"zap-light16.psf", imageHandle, systemTable);
+	if(consoleFont == NULL || consoleFont->GlyphBuffer == NULL) {
+		Print(L"System console font was not found, or invalid!\r\n");
+		return EFI_NOT_FOUND;
+	}
+	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
+	Print(L"Glyph buffer location: 0x%016x\r\n", consoleFont->GlyphBuffer);
 	// Setup the frame buffer. If it fails, oh well, no graphics for you.
 	struct KernelParameters *kernelParameters = &gKernelParameters;
 	kernelParameters->FrameBuffer = frameBuffer;
