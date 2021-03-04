@@ -60,7 +60,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 $(KERNEL): $(OBJS)
 	@ echo === LINKING $(OBJS)
 	@ $(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
-	@ strip $(KERNEL)
+#	@ strip $(KERNEL)
 	
 link: $(KERNEL)
 
