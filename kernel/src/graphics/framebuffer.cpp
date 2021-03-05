@@ -1,5 +1,6 @@
 #include "framebuffer.hpp"
 #include <stddef.h>
+#include "../memory/pageallocator.hpp"
 #define PIXEL_FORMAT_RGB_RESERVED_8BIT_PER_COLOR 0
 #define PIXEL_FORMAT_BGR_RESERVED_8BIT_PER_COLOR 1
 #define PIXEL_BIT_MASK 2
@@ -55,8 +56,10 @@ void InitializeKernelFrameBuffer(FrameBuffer *frameBuffer, KernelFrameBufferInfo
 
 KernelFrameBuffer KernelFrameBuffer::GlobalSurface;
 
-KernelFrameBuffer *KernelFrameBuffer::InitializeInstance(FrameBuffer *frameBuffer)
+KernelFrameBuffer *KernelFrameBuffer::InitializeInstance(FrameBuffer *frameBuffer, PageAllocator *pageAllocator)
 {
+    // Lock the frame buffer pages.
+    pageAllocator->LockPages(frameBuffer->BaseAddress, frameBuffer->Size / pageAllocator->PageSize());
     GlobalSurface = KernelFrameBuffer(frameBuffer);
     return GetInstance();
 }

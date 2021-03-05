@@ -1,7 +1,8 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
-#include "../../../common/include/framebuffer.h"
+#include <framebuffer.h>
+#include "../memory/pageallocator.hpp"
 
 struct KernelFrameBufferInfo
 {
@@ -33,7 +34,7 @@ class KernelFrameBuffer
         void SetPixel(const unsigned int x, const unsigned int y, const unsigned int color);
         void Clear(const unsigned int color);
         static KernelFrameBuffer* GetInstance();
-        static KernelFrameBuffer* InitializeInstance(FrameBuffer* frameBuffer);
+        static KernelFrameBuffer* InitializeInstance(FrameBuffer* frameBuffer, PageAllocator *pageAllocator);
 };
 
 

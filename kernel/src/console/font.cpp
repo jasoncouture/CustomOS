@@ -1,6 +1,5 @@
 #include "font.hpp"
 #include "../graphics/framebuffer.hpp"
-#include "../../../common/include/font.h"
 
 KernelConsoleFont KernelConsoleFont::Instance;
 Font KernelConsoleFont::FontInstance;

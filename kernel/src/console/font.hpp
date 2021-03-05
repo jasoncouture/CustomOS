@@ -1,6 +1,6 @@
 #pragma once
 #include "../graphics/framebuffer.hpp"
-#include "../../../common/include/font.h"
+#include <font.h>
 #include "zap-light-16.hpp"
 
 class KernelConsoleFont {

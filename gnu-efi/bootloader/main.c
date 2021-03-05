@@ -2,7 +2,6 @@
 #include "graphics.h"
 #include "../../common/include/framebuffer.h"
 #include "../../common/include/kernelparameters.h"
-typedef unsigned long long size_t;
 typedef void __attribute__((sysv_abi)) (*KernelStart)(struct KernelParameters *);
 struct KernelParameters gKernelParameters;
 
@@ -224,10 +223,28 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	}
 	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
 	Print(L"Glyph buffer location: 0x%016x\r\n", consoleFont->GlyphBuffer);
+	EFI_MEMORY_DESCRIPTOR* map = NULL;
+	UINTN mapSize, mapKey, descriptorSize;
+	UINT32 descriptorVersion;
+	struct BootMemoryMap *bootMemoryMap = NULL;
+	systemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(struct BootMemoryMap), (void**)&bootMemoryMap);
+	systemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &descriptorVersion); // This first call populates everything but map, since map is NULL
+	systemTable->BootServices->AllocatePool(EfiLoaderData, mapSize, (void**)&map); // Allocate space for map based on the previous call
+	systemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &descriptorVersion); // And pass everything we did before, this time actually populating the map.
+	bootMemoryMap->MemoryMap = (void*)map; // Convert this to the kernels representation of the memory map. The data structure is the same.
+	bootMemoryMap->MemoryMapSize = mapSize;
+	bootMemoryMap->MemoryMapDescriptorSize = descriptorSize;
+	
+
 	// Setup the frame buffer. If it fails, oh well, no graphics for you.
 	struct KernelParameters *kernelParameters = &gKernelParameters;
 	kernelParameters->FrameBuffer = frameBuffer;
 	kernelParameters->Font = consoleFont;
+	kernelParameters->BootMemoryMap = bootMemoryMap;
+
+	// Time to terminate boot services.
+	systemTable->BootServices->ExitBootServices(imageHandle, mapKey);
+
 	// Transfer execution to the kernel.
 	KernelStart kernelStart = (KernelStart)kernelStartAddress;
 	kernelStart(kernelParameters);
