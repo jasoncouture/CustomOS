@@ -42,6 +42,8 @@ setup:
 
 build: $(OBJS)
 
+$(OBJS): $(COBJS) $(CPPOBJS) $(ASMOBJS)
+
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.s
 	@ echo === ASSEMBLING $^
 	@ mkdir -p $(@D)

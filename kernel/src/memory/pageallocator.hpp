@@ -32,7 +32,7 @@ class PageAllocator
 
         static PageAllocator * Initialize(Memory* memory);
         static PageAllocator * GetInstance();
-        size_t PageSize() { this->memory->PageSize(); }
+        size_t PageSize() { return this->memory->PageSize(); }
         void FreePage(void* address);
         void FreePages(void* address, uint64_t count);
         void LockPage(void* address);
