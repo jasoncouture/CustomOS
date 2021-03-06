@@ -20,7 +20,7 @@ KernelConsoleFont *KernelConsoleFont::InitializeInstance(Font* font)
     return &KernelConsoleFont::Instance;
 }
 
-KernelConsoleFont *KernelConsoleFont::GetInstance() { &KernelConsoleFont::Instance; }
+KernelConsoleFont *KernelConsoleFont::GetInstance() { return &KernelConsoleFont::Instance; }
 
 KernelConsoleFont::KernelConsoleFont(Font *font, KernelFrameBuffer *kernelFrameBuffer)
 {
