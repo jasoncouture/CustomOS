@@ -46,6 +46,14 @@ BootMemoryMap *Memory::GetBootMemoryMap()
 void memset(void* memoryLocation, uint8_t value, size_t size) 
 {
     auto buffer = (uint8_t*)memoryLocation;
-    for(size_t i = 0; i < size; i++)
+    auto bytesExtra = size % 8;
+    uint8_t longValueArray[8] = { value, value, value, value, value, value, value, value };
+    uint64_t longValue = *((uint64_t*)longValueArray);
+    // Set bytes, 8 at a time.
+    for(size_t i = 0; i < size; i += 8)
+        ((uint64_t*)(buffer + i))[0] = longValue;
+    
+    // Set the remaining bytes (if any)
+    for(size_t i = size-bytesExtra; i < size; i++)
         buffer[i] = value;
 }

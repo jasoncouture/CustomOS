@@ -17,11 +17,15 @@ bool PageTableEntry::GetFlag(PageTableEntryFlag flag) {
 }
 
 uint64_t PageTableEntry::GetAddress() {
-    return (Data & ADDRESS_MASK) >> 12;
+    return (Data & ADDRESS_MASK);
 }
 
-void PageTableEntry::SetAddress(uint64_t address){
-    address <<= 12; // Shift the address left 12 bits
+void* PageTableEntry::GetAddressPointer() {
+    return (void*)(GetAddress());
+}
+
+void PageTableEntry::SetAddress(uint64_t address)
+{
     address &= ADDRESS_MASK;  //mask it
     Data &= FLAGS_MASK; // Clear the existing address, if set.
     Data |= address; // OR the address into the entry data.

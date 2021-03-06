@@ -23,4 +23,5 @@ struct PageTableEntry {
     bool GetFlag(PageTableEntryFlag flag);
     void SetAddress(uint64_t address);
     uint64_t GetAddress();
+    void* GetAddressPointer();
 };
