@@ -7,11 +7,6 @@
 // the compiler to pad these structs (A good example is the compiler will insert 48 bits into GlobalDescriptorLocation to align it to the system pointer size)
 // This will break, since the processor is expecting it exactly as the code is written here.
 
-struct GlobalDescriptorLocation {
-    uint16_t Size;
-    uint64_t Offset;
-} __attribute__((packed));
-
 struct GlobalDesciptorTableEntry {
     uint16_t LowerLimit;
     uint16_t LowerBase;
@@ -32,6 +27,11 @@ struct GlobalDesciptorTable {
 } 
 __attribute__((packed)) 
 __attribute__((aligned(0x1000)));
+
+struct GlobalDescriptorLocation {
+    uint16_t Size;
+    struct GlobalDesciptorTable* GlobalDescriptorTable;
+} __attribute__((packed));
 
 extern GlobalDesciptorTable DefaultGlobalDesciptorTable;
 

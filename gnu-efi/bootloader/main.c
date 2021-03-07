@@ -43,6 +43,17 @@ int memcmp(const void *leftPointer, const void *rightPointer, size_t size)
 	return 0;
 }
 
+void DumpMemoryMap(EFI_MEMORY_DESCRIPTOR *memoryMap, size_t size, size_t descriptorSize, EFI_SYSTEM_TABLE *systemTable){
+	uint64_t entries = size / descriptorSize;
+    for (uint64_t i = 0; i < entries; i++)
+    {
+        EFI_MEMORY_DESCRIPTOR *descriptor = (EFI_MEMORY_DESCRIPTOR *)((uint64_t)memoryMap + (i * descriptorSize));
+		if(descriptor->Type != EfiConventionalMemory) continue; // Let's see where we can write.
+		Print(L"0x%02x: 0x%016x-0x%016x\r\n", descriptor->Type, descriptor->PhysicalStart, descriptor->PhysicalStart + (0x1000 * descriptor->NumberOfPages));
+		systemTable->BootServices->Stall(5000);
+    }
+}
+
 EFI_STATUS BootFailed()
 {
 	Print(L"Boot failed.\r\n\r\n");
@@ -225,6 +236,11 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	}
 	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
 	Print(L"Glyph buffer location: 0x%016x\r\n", consoleFont->GlyphBuffer);
+	// I see a few problems with this code now. Specifically the kernel loading code.
+	// We're ignoring the memory map and blindly loading at offset 0
+	// This is not EfiConventionalMemory (Type 7)
+	// This is likely the source of the random kernel crashes.
+	// Relocatable kernel?
 	EFI_MEMORY_DESCRIPTOR* map = NULL;
 	UINTN mapSize, mapKey, descriptorSize;
 	UINT32 descriptorVersion;
@@ -233,6 +249,10 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	systemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &descriptorVersion); // This first call populates everything but map, since map is NULL
 	systemTable->BootServices->AllocatePool(EfiLoaderData, mapSize, (void**)&map); // Allocate space for map based on the previous call
 	systemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &descriptorVersion); // And pass everything we did before, this time actually populating the map.
+	//DumpMemoryMap(map, mapSize, descriptorSize, systemTable);
+	//while(1);
+	systemTable->BootServices->ExitBootServices(imageHandle, mapKey);
+
 	bootMemoryMap->MemoryMap = (void*)map; // Convert this to the kernels representation of the memory map. The data structure is the same.
 	bootMemoryMap->MemoryMapSize = mapSize;
 	bootMemoryMap->MemoryMapDescriptorSize = descriptorSize;
@@ -245,7 +265,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	kernelParameters->BootMemoryMap = bootMemoryMap;
 
 	// Time to terminate boot services.
-	systemTable->BootServices->ExitBootServices(imageHandle, mapKey);
+	
 
 	// Transfer execution to the kernel.
 	KernelStart kernelStart = (KernelStart)kernelStartAddress;

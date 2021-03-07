@@ -8,7 +8,7 @@ CC = gcc
 ASMC = nasm
 LD = ld
 
-CFLAGS = -ffreestanding -fshort-wchar -fno-inline -I../common/include
+CFLAGS = -ffreestanding -fshort-wchar -fno-inline -g -I../common/include
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib
 ASMFLAGS = -f elf64
 
@@ -28,6 +28,7 @@ OBJS += $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRC))
 OBJS += $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(CPPSRC))
 DIRS = $(wildcard $(SRCDIR)/*)
 KERNEL = $(BUILDDIR)/kernel.elf
+KERNELSYM = $(BUILDDIR)/kernel.sym
 FONT = $(BUILDDIR)/zap-light16.psf
 OSIMAGE = $(BUILDDIR)/$(OSNAME).img
 OSIMAGETEMP = $(OSIMAGE).tmp
@@ -64,6 +65,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 $(KERNEL): $(OBJS)
 	@ echo === LINKING $(OBJS)
 	@ $(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
+	@ objcopy --only-keep-debug $(KERNEL) $(KERNELSYM)
+	@ objcopy --strip-debug $(KERNEL)
 #	@ strip $(KERNEL)
 	
 link: $(KERNEL)

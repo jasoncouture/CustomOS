@@ -10,11 +10,11 @@
 #include "interrupts/idt.hpp"
 #include "interrupts/interrupts.hpp"
 
-GlobalDescriptorLocation globalDescriptorLocation;
 void kInitGlobalDesciptorTable() 
 {
+    GlobalDescriptorLocation globalDescriptorLocation;
     globalDescriptorLocation.Size = sizeof(GlobalDesciptorTable) - 1;
-    globalDescriptorLocation.Offset = (uint64_t)&DefaultGlobalDesciptorTable;
+    globalDescriptorLocation.GlobalDescriptorTable = &DefaultGlobalDesciptorTable;
     LoadGlobalDescriptorTable(&globalDescriptorLocation);
 }
 
@@ -23,7 +23,7 @@ void kInitMemory(BootMemoryMap *bootMemoryMap) {
     PageAllocator::Initialize(memory);
 }
 
-void kInitVirtualMemory(FrameBuffer *frameBuffer) {
+void kInitVirtualMemory(FrameBuffer *frameBuffer, BootMemoryMap *memoryMap) {
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     
@@ -37,8 +37,15 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer) {
     uint64_t memorySize = memory->Size();
     uint64_t page = 0;
     // Identity map all memory.
-    for (page = 0; page < memorySize + pageSize; page += pageSize)
-        virtualAddressManager->Map((void *)page, (void *)page);
+    uint64_t entries = memoryMap->MemoryMapSize / memoryMap->MemoryMapDescriptorSize;
+    for (uint64_t i = 0; i < entries; i++)
+    {
+        BootMemoryDescriptor *descriptor = (BootMemoryDescriptor *)((uint64_t)memoryMap->MemoryMap + (i * memoryMap->MemoryMapDescriptorSize));
+        if(descriptor->PageCount == 0 || (uint64_t)descriptor->PhysicalAddress == 0xffffffffffffffff) continue;
+        KernelVirtualAddressManager.Map(descriptor->VirtualAddress, descriptor->PhysicalAddress);
+    }
+    // for (page = 0; page < memorySize + pageSize; page += pageSize)
+    //     virtualAddressManager->Map((void *)page, (void *)page);
     // Frame buffer might lie outside of memory space, so make sure it's mapped into virtual memory as well.
     for (page = (uint64_t)frameBuffer->BaseAddress; page < frameBuffer->Size + pageSize; page += pageSize)
         KernelVirtualAddressManager.Map((void *)page, (void *)page);
@@ -74,14 +81,12 @@ void kInitInterrupts()
 }
 
 void kInit(KernelParameters *kernelParameters)
-{   
-    static uint64_t initialized = 0;
-    if(initialized) return; // This will be replaced with panic, once written.
-    initialized = 1;
-    kInitGlobalDesciptorTable();
+{
+    
     kInitMemory(kernelParameters->BootMemoryMap);
-    kInitVirtualMemory(kernelParameters->FrameBuffer);
+    kInitVirtualMemory(kernelParameters->FrameBuffer, kernelParameters->BootMemoryMap);
+    kInitGlobalDesciptorTable();
     kInitFrameBuffer(kernelParameters->FrameBuffer);   
     kInitConsoleFont(kernelParameters->Font);
-    kInitInterrupts();
+    //kInitInterrupts();
 }

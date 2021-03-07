@@ -23,7 +23,7 @@ extern "C" void _start(KernelParameters *kernelParameters)
     auto font = KernelConsoleFont::GetInstance();
     auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
     font->DrawStringAt("Booting kernel (Early init)", 0, font->GetCharacterPixelHeight() * 0);
-    asm("int $0x0e");
+    //asm("int $0x0e");
     font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight() * 1);
     font->DrawStringAt("Total system memory:", 0, font->GetCharacterPixelHeight() * 2);
     font->DrawStringAt("Bytes free:", 0, font->GetCharacterPixelHeight() * 3);

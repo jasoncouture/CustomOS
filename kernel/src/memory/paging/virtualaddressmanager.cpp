@@ -81,7 +81,6 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
 
 void VirtualAddressManager::Activate()
 {
-    // TODO: Activate by giving cr3 the address of RootTable
     // Move the address of our root table into CR3
     // This will cause the MMU on the CPU to use it.
     asm ("mov %0, %%cr3" : : "r" (this->RootTable) );
