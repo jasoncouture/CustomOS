@@ -40,6 +40,9 @@
 # Tiano Core keeps changing this, so... no
 OVMFbin/
 
+# Log files
+*.log
+
 .vscode/
 kernel/bin/
 kernel/obj/
