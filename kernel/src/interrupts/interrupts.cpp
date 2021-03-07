@@ -6,12 +6,8 @@ __attribute__((interrupt)) void Interrupt_PageFaultHandler(struct InterruptFrame
 {
     auto consoleFont = KernelConsoleFont::GetInstance();
     auto frameBuffer = KernelFrameBuffer::GetInstance();
+    //frameBuffer->Clear(0x000000ff);
+    consoleFont->DrawStringAt("Panic: Page fault", 0, 0, 0, 0x000000ff);
 
-    frameBuffer->Clear(0x000000FF);
-    consoleFont->SetForegroundColor(0xffffffff);
-    consoleFont->SetBackgroundColor(0x000000ff);
-
-    consoleFont->DrawStringAt("Panic: Page fault", 0, 0);
-
-    asm( "hlt" );
+    //asm( "hlt" );
 }

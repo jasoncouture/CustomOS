@@ -47,7 +47,9 @@ PageAllocator::PageAllocator(Memory* memory)
     }
     // Figure out how many bytes we need for the bitmap
     // We need 1 bit per page, and size is in bytes.
-    uint64_t bitmapSize = memorySize / memory->PageSize() / 8 + 1;
+    uint64_t bitmapSize = (memorySize / memory->PageSize() / 8);
+    if(memorySize % memory->PageSize() != 0)
+        bitmapSize++;
     uint8_t* bitmapBuffer = (uint8_t*)largestEntryDesciptor->PhysicalAddress;
     memset(bitmapBuffer, 0, bitmapSize);
 

@@ -49,7 +49,8 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer) {
 
 void kInitFrameBuffer(FrameBuffer *frameBuffer)
 {
-    KernelFrameBuffer::InitializeInstance(frameBuffer);
+    auto kernelFrameBuffer = KernelFrameBuffer::InitializeInstance(frameBuffer);
+    kernelFrameBuffer->Clear(0);
 }
 
 void kInitConsoleFont(Font *font) 

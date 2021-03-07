@@ -79,6 +79,8 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 		kernel->Read(kernel, &size, &header);
 	}
 
+	
+
 	int bootFailed = 0;
 
 	if (memcmp(&header.e_ident[EI_MAG0], ELFMAG, SELFMAG) != 0)

@@ -74,18 +74,9 @@ KernelFrameBuffer::KernelFrameBuffer()
 
 void KernelFrameBuffer::DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBufferInfo *kernelFrameBuffer)
 {
-    if ((kernelFrameBuffer->RedPosition / 8) < kernelFrameBuffer->BytesPerPixel)
-    {
-        buffer[kernelFrameBuffer->RedPosition / 8] = colorDataBuffer[0];
-    }
-    if ((kernelFrameBuffer->GreenPosition / 8) < kernelFrameBuffer->BytesPerPixel)
-    {
-        buffer[kernelFrameBuffer->GreenPosition / 8] = colorDataBuffer[1];
-    }
-    if ((kernelFrameBuffer->BluePosition / 8) < kernelFrameBuffer->BytesPerPixel)
-    {
-        buffer[kernelFrameBuffer->BluePosition / 8] = colorDataBuffer[2];
-    }
+    buffer[kernelFrameBuffer->RedPosition / 8] = colorDataBuffer[0];
+    buffer[kernelFrameBuffer->GreenPosition / 8] = colorDataBuffer[1];
+    buffer[kernelFrameBuffer->BluePosition / 8] = colorDataBuffer[2];
 }
 
 KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
@@ -95,10 +86,9 @@ KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
 
 void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, const unsigned int color)
 {
-
-    KernelFrameBufferInfo *kernelFrameBuffer = &this->kFrameBufferInfo;
-    FrameBuffer *frameBuffer = kernelFrameBuffer->FrameBuffer;
-    if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || kernelFrameBuffer->BytesPerPixel == 0)
+    
+    FrameBuffer *frameBuffer = this->kFrameBufferInfo.FrameBuffer;
+    if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || this->kFrameBufferInfo.BytesPerPixel == 0)
         return;
     // y * width + x = offset
     // In this case, * bytes per pixel
@@ -106,9 +96,12 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     // Dereferenced, and assigned the value provided
     unsigned int localColor = color;
     uint8_t *colorData = (uint8_t *)&localColor;
-    uint8_t *buffer = (uint8_t *)((x * kernelFrameBuffer->BytesPerPixel) + (y * kernelFrameBuffer->BytesPerPixel * frameBuffer->PixelsPerScanLine) + (char *)frameBuffer->BaseAddress);
+    uint64_t frameBufferOffset = (x * this->kFrameBufferInfo.BytesPerPixel) + (y * this->kFrameBufferInfo.BytesPerPixel * frameBuffer->PixelsPerScanLine);
+    // If we'd go out of the framebuffer bounds, don't.
+    if(frameBufferOffset + this->kFrameBufferInfo.BytesPerPixel > frameBuffer->Size) return;
+    uint8_t *buffer = (uint8_t *)frameBuffer->BaseAddress;
 
-    DirectWritePixel(buffer, colorData, kernelFrameBuffer);
+    DirectWritePixel(buffer + frameBufferOffset, colorData, &this->kFrameBufferInfo);
 }
 
 void KernelFrameBuffer::Clear(const unsigned int color)
