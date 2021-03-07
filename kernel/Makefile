@@ -44,7 +44,7 @@ build: $(OBJS)
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 	@ echo === ASSEMBLING $^
 	@ mkdir -p $(@D)
-	@ $(AS) $(AFLAGS) $^ -o $@
+	@ $(ASMC) $(ASMFLAGS) $^ -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@ echo === COMPILING $^
