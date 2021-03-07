@@ -24,7 +24,7 @@ extern "C" void _start(KernelParameters *kernelParameters)
     uint64_t pageSize = memory->PageSize();
     uint64_t memorySize = memory->Size();
     uint64_t page = 0;
-    for (page = 0; page < memorySize; page += pageSize)
+    for (page = 0; page < memorySize + pageSize; page += pageSize)
     {
         // Identity map all of memory.
         virtualAddressManager->Map((void *)page, (void *)page);
