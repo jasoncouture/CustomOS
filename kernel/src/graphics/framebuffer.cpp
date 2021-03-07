@@ -56,10 +56,9 @@ void InitializeKernelFrameBuffer(FrameBuffer *frameBuffer, KernelFrameBufferInfo
 
 KernelFrameBuffer KernelFrameBuffer::GlobalSurface;
 
-KernelFrameBuffer *KernelFrameBuffer::InitializeInstance(FrameBuffer *frameBuffer, PageAllocator *pageAllocator)
+KernelFrameBuffer *KernelFrameBuffer::InitializeInstance(FrameBuffer *frameBuffer)
 {
     // Lock the frame buffer pages.
-    pageAllocator->LockPages(frameBuffer->BaseAddress, frameBuffer->Size / pageAllocator->PageSize());
     GlobalSurface = KernelFrameBuffer(frameBuffer);
     return GetInstance();
 }

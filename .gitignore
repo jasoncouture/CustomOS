@@ -37,6 +37,8 @@
 *.img
 *.tmp
 
+# Tiano Core keeps changing this, so... no
+OVMFbin/
 
 .vscode/
 kernel/bin/

@@ -25,9 +25,15 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
 {
     auto pageAllocator = PageAllocator::GetInstance();
     auto pageSize = pageAllocator->PageSize();
-    PageTableIndexer indexer = PageTableIndexer((uint64_t)virtualAddress); // Create the indexes we need from the virtual address pointer.
+
+    uint64_t virtualPage = (uint64_t)virtualAddress >> 12;
+    auto PageIndex = virtualPage & 0x1ff;
+    auto PageTableIndex = (virtualPage >> 9 ) & 0x1ff;
+    auto PageDirectoryIndex = (virtualPage >> 18) & 0x1ff;
+    auto TopLevelDirectoryPointerIndex = (virtualPage >> 27) & 0x1ff;
+    
     PageTableEntry *previousTable = this->RootTable;
-    PageTableEntry pageDirectoryEntry = previousTable[indexer.TopLevelDirectoryPointerIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
+    PageTableEntry pageDirectoryEntry = previousTable[TopLevelDirectoryPointerIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
     if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
     {
         PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
@@ -35,12 +41,12 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
         pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
         pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
         pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-        previousTable[indexer.TopLevelDirectoryPointerIndex] = pageDirectoryEntry;
+        previousTable[TopLevelDirectoryPointerIndex] = pageDirectoryEntry;
     }
 
     previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
 
-    pageDirectoryEntry = previousTable[indexer.PageDirectoryIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
+    pageDirectoryEntry = previousTable[PageDirectoryIndex];
     if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
     {
         PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
@@ -48,12 +54,12 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
         pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
         pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
         pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-        previousTable[indexer.TopLevelDirectoryPointerIndex] = pageDirectoryEntry;
+        previousTable[PageDirectoryIndex] = pageDirectoryEntry;
     }
 
     previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
 
-    pageDirectoryEntry = previousTable[indexer.PageTableIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
+    pageDirectoryEntry = previousTable[PageTableIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
     if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
     {
         PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
@@ -61,16 +67,16 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
         pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
         pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
         pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-        previousTable[indexer.TopLevelDirectoryPointerIndex] = pageDirectoryEntry;
+        previousTable[PageTableIndex] = pageDirectoryEntry;
     }
 
     previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
 
-    pageDirectoryEntry = previousTable[indexer.PageIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
+    pageDirectoryEntry = previousTable[PageIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
     pageDirectoryEntry.SetAddress((uint64_t)physicalAddress);
     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-    previousTable[indexer.PageIndex] = pageDirectoryEntry;
+    previousTable[PageIndex] = pageDirectoryEntry;
 }
 
 void VirtualAddressManager::Activate()

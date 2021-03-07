@@ -34,7 +34,7 @@ class KernelFrameBuffer
         void SetPixel(const unsigned int x, const unsigned int y, const unsigned int color);
         void Clear(const unsigned int color);
         static KernelFrameBuffer* GetInstance();
-        static KernelFrameBuffer* InitializeInstance(FrameBuffer* frameBuffer, PageAllocator *pageAllocator);
+        static KernelFrameBuffer* InitializeInstance(FrameBuffer* frameBuffer);
 };
 
 

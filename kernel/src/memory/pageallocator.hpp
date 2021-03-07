@@ -23,11 +23,6 @@ class PageAllocator
         uint64_t earliestKnownFreePage = 0;
 
         static PageAllocator Instance;
-
-        void ReservePage(void* address);
-        void ReservePages(void* address, uint64_t count);
-        void UnreservePage(void* address);
-        void UnreservePages(void* address, uint64_t count);
     public:
 
         static PageAllocator * Initialize(Memory* memory);
@@ -37,6 +32,10 @@ class PageAllocator
         void FreePages(void* address, uint64_t count);
         void LockPage(void* address);
         void LockPages(void* address, uint64_t count);
+        void ReservePage(void* address);
+        void ReservePages(void* address, uint64_t count);
+        void UnreservePage(void* address);
+        void UnreservePages(void* address, uint64_t count);
 
         void* AllocatePage();
 
