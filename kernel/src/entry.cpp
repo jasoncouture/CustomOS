@@ -27,6 +27,5 @@ extern "C" void _start(KernelParameters *kernelParameters)
     font->DrawStringAt("Total system memory:", 0, font->GetCharacterPixelHeight() * 2);
     font->DrawStringAt(kToString(memory->Size()), 26 * 8, font->GetCharacterPixelHeight() * 2);
     font->DrawStringAt(kToString(freeMemoryInfo.BytesUsed), 0, font->GetCharacterPixelHeight() * 3);
-
     asm("hlt");
 }

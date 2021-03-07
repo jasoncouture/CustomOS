@@ -7,6 +7,8 @@
 #include "console/cstr.hpp"
 #include "memory/paging/virtualaddressmanager.hpp"
 #include "memory/gdt/gdt.hpp"
+#include "interrupts/idt.hpp"
+#include "interrupts/interrupts.hpp"
 
 GlobalDescriptorLocation globalDescriptorLocation;
 void kInitGlobalDesciptorTable() 
@@ -55,6 +57,21 @@ void kInitConsoleFont(Font *font)
     KernelConsoleFont::InitializeInstance(font);
 }
 
+InterruptDesciptorTableLocation interruptDesciptorTableLocation;
+
+void kInitInterrupts() 
+{
+    interruptDesciptorTableLocation.Limit = 0x0FFF; // Maximum number of entries;
+    interruptDesciptorTableLocation.InterruptDesciptors = (InterruptDescriptorTableEntry*)PageAllocator::GetInstance()->AllocatePage();
+
+    InterruptDescriptorTableEntry *pageFaultEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0xE;
+    pageFaultEntry->SetOffset((uint64_t)Interrupt_PageFaultHandler);
+    pageFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
+    pageFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
+    // Load IDT
+    asm ( "lidt %0" : : "m" (interruptDesciptorTableLocation) );
+}
+
 void kInit(KernelParameters *kernelParameters)
 {   
     static uint64_t initialized = 0;
@@ -65,4 +82,5 @@ void kInit(KernelParameters *kernelParameters)
     kInitVirtualMemory(kernelParameters->FrameBuffer);
     kInitFrameBuffer(kernelParameters->FrameBuffer);   
     kInitConsoleFont(kernelParameters->Font);
+    kInitInterrupts();
 }

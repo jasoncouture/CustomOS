@@ -41,6 +41,11 @@ setup:
 
 build: $(OBJS)
 
+$(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
+	@ echo === COMPILING $^
+	@ mkdir -p $(@D)
+	@ $(CC) -mno-red-zone -mgeneral-regs-only $(CFLAGS) -c $^ -o $@
+
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 	@ echo === ASSEMBLING $^
 	@ mkdir -p $(@D)
