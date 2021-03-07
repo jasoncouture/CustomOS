@@ -20,13 +20,12 @@ BOOTEFI := $(GNUEFI)/x86_64/bootloader/main.efi
 
 rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 
-ASMSRC = $(call rwildcard,$(SRCDIR),*.s)
+ASMSRC = $(call rwildcard,$(SRCDIR),*.asm)
 SRC = $(call rwildcard,$(SRCDIR),*.c)
 CPPSRC = $(call rwildcard,$(SRCDIR),*.cpp)
-ASMOBJS = $(patsubst $(SRCDIR)/%.s, $(OBJDIR)/%_asm.o, $(ASMSRC))
-COBJS = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRC))
-CPPOBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(CPPSRC))
-OBJS = $(COBJS) $(CPPOBJS) $(ASMOBJS)
+OBJS = $(patsubst $(SRCDIR)/%.asm, $(OBJDIR)/%_asm.o, $(ASMSRC))
+OBJS += $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRC))
+OBJS += $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(CPPSRC))
 DIRS = $(wildcard $(SRCDIR)/*)
 KERNEL = $(BUILDDIR)/kernel.elf
 FONT = $(BUILDDIR)/zap-light16.psf
@@ -42,7 +41,7 @@ setup:
 
 build: $(OBJS)
 
-$(OBJDIR)/%_asm.o: $(SRCDIR)/%.s
+$(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 	@ echo === ASSEMBLING $^
 	@ mkdir -p $(@D)
 	@ $(AS) $(AFLAGS) $^ -o $@
