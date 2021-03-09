@@ -15,23 +15,43 @@
 #define BLACK 0x00000000
 #define WHITE 0x00FFFFFF
 
-extern "C" void _start(KernelParameters *kernelParameters)
+void WriteDebugData(const char * description, uint64_t value, uint64_t lineNumber, bool hex = false)
 {
-    kInit(kernelParameters);
+    auto font = KernelConsoleFont::GetInstance();
+    font->DrawStringAt("                                                                              ", 0, font->GetCharacterPixelHeight() * lineNumber);
+    font->DrawStringAt(description, 0, font->GetCharacterPixelHeight() * lineNumber);
+    // This is done after processing Description, because kToHexString and kToString share a single global buffer
+    // and calling it will nuke the value located in the pointer above if it's used as an input value.
+    const char *numericString = hex ? kToHexString(value) : kToString(value);
+    font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
+}
+void kMain(KernelParameters *kernelParameters)
+{
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto font = KernelConsoleFont::GetInstance();
     auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
     font->DrawStringAt("Booting kernel (Early init)", 0, font->GetCharacterPixelHeight() * 0);
-    //asm("int $0x0e");
+    
     font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight() * 1);
-    font->DrawStringAt("Total system memory:", 0, font->GetCharacterPixelHeight() * 2);
-    font->DrawStringAt("Bytes free:", 0, font->GetCharacterPixelHeight() * 3);
-    font->DrawStringAt("Bytes used:", 0, font->GetCharacterPixelHeight() * 4);
-    font->DrawStringAt("Bytes reserved:", 0, font->GetCharacterPixelHeight() * 5);
-    font->DrawStringAt(kToString(memory->Size()), 30 * 8, font->GetCharacterPixelHeight() * 2);
-    font->DrawStringAt(kToString(freeMemoryInfo.BytesFree), 30 * 8, font->GetCharacterPixelHeight() * 3);
-    font->DrawStringAt(kToString(freeMemoryInfo.BytesUsed), 30 * 8, font->GetCharacterPixelHeight() * 4);
-    font->DrawStringAt(kToString(freeMemoryInfo.BytesReserved), 30 * 8, font->GetCharacterPixelHeight() * 5);
-    asm("hlt");
+    WriteDebugData("Total system memory:", memory->Size(), 2);
+    WriteDebugData("Bytes free:", freeMemoryInfo.BytesFree, 3);
+    WriteDebugData("Bytes used:", freeMemoryInfo.BytesUsed, 4);
+    WriteDebugData("Bytes reserved:", freeMemoryInfo.BytesReserved, 5);
+
+    auto bitmap = pageAllocator->GetBitmap();
+    WriteDebugData("Bitmap located at:", (uint64_t)bitmap->GetBuffer(), 6, true);
+    WriteDebugData("Bitmap size:", (uint64_t)bitmap->Size(), 7);
+
+    while(true) 
+    {
+        uint64_t yStart = 8;
+        for(auto x = 0xc0000; x < bitmap->Size(); x++) 
+        {
+            if(x % 10 == 0) // Stall a bit
+                for(auto y = 0ull; y < 10000; y++) ;
+            uint64_t line = yStart + (x%10);
+            WriteDebugData(kToHexString(x * 4096), (*bitmap)[x] ? 1 : 0, line);
+        }
+    }
 }

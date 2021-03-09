@@ -3,7 +3,10 @@
 #include "../memory.hpp"
 #include "../pageallocator.hpp"
 
-VirtualAddressManager KernelVirtualAddressManager = 0;
+// Class members
+
+VirtualAddressManager VirtualAddressManager::KernelVirtualAddressManager = 0;
+bool VirtualAddressManager::IsInitialized = false;
 
 VirtualAddressManager::VirtualAddressManager()
 {
@@ -84,6 +87,16 @@ void VirtualAddressManager::Activate()
     // Move the address of our root table into CR3
     // This will cause the MMU on the CPU to use it.
     asm ("mov %0, %%cr3" : : "r" (this->RootTable) );
+}
+
+VirtualAddressManager* VirtualAddressManager::GetKernelVirtualAddressManager()
+{
+    if(!IsInitialized) 
+    {
+        IsInitialized = true;
+        KernelVirtualAddressManager = VirtualAddressManager();
+    }
+    return &KernelVirtualAddressManager;
 }
 
 // VirtualAddressManager::~VirtualAddressManager()

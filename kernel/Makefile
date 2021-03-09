@@ -8,7 +8,7 @@ CC = gcc
 ASMC = nasm
 LD = ld
 
-CFLAGS = -ffreestanding -fshort-wchar -fno-inline -g -I../common/include
+CFLAGS = -ffreestanding -fshort-wchar -fno-inline -I../common/include
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib
 ASMFLAGS = -f elf64
 
@@ -65,8 +65,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 $(KERNEL): $(OBJS)
 	@ echo === LINKING $(OBJS)
 	@ $(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
-	@ objcopy --only-keep-debug $(KERNEL) $(KERNELSYM)
-	@ objcopy --strip-debug $(KERNEL)
 #	@ strip $(KERNEL)
 	
 link: $(KERNEL)

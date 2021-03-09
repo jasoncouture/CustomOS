@@ -40,5 +40,6 @@ class PageAllocator
         void* AllocatePage();
 
         FreeMemoryInformation GetFreeMemoryInformation();
+        Bitmap* GetBitmap();
 };
 

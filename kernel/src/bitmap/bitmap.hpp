@@ -16,4 +16,5 @@ class Bitmap
         bool Set(uint64_t index);
         bool Set(uint64_t index, bool value);
         bool Unset(uint64_t index);
+        uint8_t *GetBuffer();
 };

@@ -25,8 +25,7 @@ struct GlobalDesciptorTable {
     GlobalDesciptorTableEntry UserCodeSegment;
     GlobalDesciptorTableEntry UserDataSegment;
 } 
-__attribute__((packed)) 
-__attribute__((aligned(0x1000)));
+__attribute__((packed));
 
 struct GlobalDescriptorLocation {
     uint16_t Size;

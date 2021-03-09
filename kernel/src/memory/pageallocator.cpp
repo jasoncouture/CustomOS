@@ -42,8 +42,6 @@ PageAllocator::PageAllocator(Memory *memory)
     for (uint64_t i = 0; i < entries; i++)
     {
         BootMemoryDescriptor *descriptor = (BootMemoryDescriptor *)((uint64_t)bootMemoryMap->MemoryMap + (i * bootMemoryMap->MemoryMapDescriptorSize));
-        if (descriptor->PageCount == 0 || (uint64_t)descriptor->PhysicalAddress == 0xffffffffffffffff)
-            continue;
         if (descriptor->Type != MDT_EFI_CONVENTIONAL_MEMORY_TYPE)
             continue;
         // Find smallest page range that is larger than the page size of the bitmap.
@@ -65,8 +63,8 @@ PageAllocator::PageAllocator(Memory *memory)
     // This can waste up to 4095 bytes of ram
     // but honestly, who gives a shit? We don't have virtual memory addressing quite yet.
     this->LockPages(bitmapBuffer, bitmapPageSize);
-    uint64_t kernelPageCount = (((uint64_t)&_kernelEnd - (uint64_t)&_kernelStart) / this->memory->PageSize()) + 1;
-    this->LockPages(&_kernelStart, kernelPageCount);
+    //uint64_t kernelPageCount = (((uint64_t)&_kernelEnd - (uint64_t)&_kernelStart) / this->memory->PageSize()) + 1;
+    //this->LockPages(&_kernelStart, kernelPageCount);
 
     for (uint64_t i = 0; i < entries; i++)
     {
@@ -93,7 +91,7 @@ void *PageAllocator::AllocatePage()
     {
         if (this->bitmap[index])
             continue; // This page is allocated already;
-        this->earliestKnownFreePage = index + 1;
+        this->earliestKnownFreePage = index;
         void *newPage = (void *)(index * this->memory->PageSize());
         this->LockPage(newPage); // Mark the page as allocated
         return newPage;
@@ -178,4 +176,8 @@ void PageAllocator::UnreservePages(void *address, uint64_t count)
 FreeMemoryInformation PageAllocator::GetFreeMemoryInformation()
 {
     return {this->freeMemory, this->reservedMemory, this->usedMemory};
+}
+
+Bitmap * PageAllocator::GetBitmap() {
+    return &this->bitmap;
 }

@@ -8,7 +8,7 @@ Bitmap::Bitmap(void *buffer, size_t size)
 
 uint64_t Bitmap::Size()
 {
-    return this->size;
+    return this->size * 8;
 }
 
 bool Bitmap::operator[](uint64_t index)
@@ -18,7 +18,7 @@ bool Bitmap::operator[](uint64_t index)
     if (byteIndex >= this->size)
         return false;
 
-    uint8_t mask = 0b10000000 >> bitIndex;
+    uint8_t mask = (uint8_t)0b10000000 >> bitIndex;
     if (buffer[byteIndex] & mask)
         return true;
     return false;
@@ -42,7 +42,7 @@ bool Bitmap::Set(uint64_t index)
     uint8_t bitIndex = index % 8;
     if (byteIndex >= this->size)
         return false;
-    uint8_t mask = 0b10000000 >> bitIndex;
+    uint8_t mask = (uint8_t)0b10000000 >> bitIndex;
     buffer[byteIndex] |= mask;
     return true;
 }
@@ -54,8 +54,12 @@ bool Bitmap::Unset(uint64_t index)
     if (byteIndex >= this->size)
         return false;
 
-    uint8_t mask = 0b10000000 >> bitIndex;
+    uint8_t mask = (uint8_t)0b10000000 >> bitIndex;
 
     buffer[byteIndex] &= ~mask;
     return true;
+}
+
+uint8_t * Bitmap::GetBuffer(){
+    return this->buffer;
 }

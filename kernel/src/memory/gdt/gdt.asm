@@ -1,4 +1,5 @@
 [bits 64]
+
 GLOBAL LoadGlobalDescriptorTable
 LoadGlobalDescriptorTable:
     lgdt [rdi]
