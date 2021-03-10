@@ -16,13 +16,13 @@ class PageAllocator
     private:
         Memory* memory;
         PageAllocator(Memory* memory);
-        Bitmap bitmap;
+        Bitmap* bitmap;
         uint64_t freeMemory;
         uint64_t reservedMemory;
         uint64_t usedMemory;
         uint64_t earliestKnownFreePage = 0;
 
-        static PageAllocator Instance;
+        static PageAllocator* Instance;
     public:
 
         static PageAllocator * Initialize(Memory* memory);

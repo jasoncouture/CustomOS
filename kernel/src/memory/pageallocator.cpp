@@ -1,40 +1,65 @@
 #include "pageallocator.hpp"
 #include <kernelparameters.h>
+#include "heap.hpp"
+#include "../console/font.hpp"
+#include "../console/cstr.hpp"
+#include "../graphics/framebuffer.hpp"
 
 #define MDT_EFI_CONVENTIONAL_MEMORY_TYPE 7
 extern uint64_t _kernelStart;
 extern uint64_t _kernelEnd;
 
-PageAllocator PageAllocator::Instance = 0;
+PageAllocator *PageAllocator::Instance = NULL;
 
 PageAllocator *PageAllocator::Initialize(Memory *memory)
 {
-    PageAllocator::Instance = PageAllocator(memory);
-    return &PageAllocator::Instance;
+    if (PageAllocator::Instance == NULL)
+    {
+        PageAllocator::Instance = new PageAllocator(memory);
+    }
+    return PageAllocator::Instance;
 }
 
 PageAllocator *PageAllocator::GetInstance()
 {
-    return &PageAllocator::Instance;
+    if (PageAllocator::Instance == NULL)
+        return PageAllocator::Initialize(Memory::GetInstance());
+    return PageAllocator::Instance;
+}
+
+void kMemoryDebug(const char *message, int column = 0) 
+{
+    #ifdef _K_MEMORY_DEBUG
+    static uint64_t yLocation = 0;
+    if(yLocation == 0)
+        yLocation = KernelFrameBuffer::GetInstance()->GetHeight() - KernelConsoleFont::GetInstance()->GetCharacterPixelHeight();
+    
+    for(uint64_t x = column * KernelConsoleFont::GetInstance()->GetCharacterPixelWidth(); x < KernelFrameBuffer::GetInstance()->GetWidth(); x+= KernelConsoleFont::GetInstance()->GetCharacterPixelWidth())
+    {
+        KernelConsoleFont::GetInstance()->DrawCharacterAt(' ', x, yLocation);
+    }
+    KernelConsoleFont::GetInstance()->DrawStringAt(message, 0, yLocation);
+    #endif
 }
 
 PageAllocator::PageAllocator(Memory *memory)
 {
     this->memory = memory;
     this->reservedMemory = this->usedMemory = 0;
-    uint64_t memorySize = memory->Size();
+    auto memorySize = memory->Size();
+    auto pageSize = memory->PageSize();
     this->freeMemory = memorySize;
     BootMemoryMap *bootMemoryMap = memory->GetBootMemoryMap();
     uint64_t entries = bootMemoryMap->MemoryMapSize / bootMemoryMap->MemoryMapDescriptorSize;
     // Figure out how many bytes we need for the bitmap
     // We need 1 bit per page, and size is in bytes.
     uint64_t bitmapSize = memorySize;
-    bitmapSize /= memory->PageSize();
+    bitmapSize /= pageSize;
     bitmapSize /= 8;
-    if (memorySize % memory->PageSize() != 0)
+    if (memorySize % pageSize != 0)
         bitmapSize++;
-    uint64_t bitmapPageSize = bitmapSize / memory->PageSize();
-    if (bitmapSize % memory->PageSize())
+    uint64_t bitmapPageSize = bitmapSize / pageSize;
+    if (bitmapSize % pageSize)
         bitmapPageSize++;
 
     uint64_t selectedEntryPageCount = 0;
@@ -55,17 +80,21 @@ PageAllocator::PageAllocator(Memory *memory)
             selectedEntryPageCount = descriptor->PageCount;
         }
     }
-
+    auto consoleFont = KernelConsoleFont::GetInstance();
+    kMemoryDebug("Allocating bitmap");
     uint8_t *bitmapBuffer = (uint8_t *)selectedEntryDescriptor->PhysicalAddress;
     memset(bitmapBuffer, 0, bitmapSize);
 
-    this->bitmap = Bitmap(bitmapBuffer, bitmapSize);
-    // This can waste up to 4095 bytes of ram
-    // but honestly, who gives a shit? We don't have virtual memory addressing quite yet.
-    this->LockPages(bitmapBuffer, bitmapPageSize);
-    //uint64_t kernelPageCount = (((uint64_t)&_kernelEnd - (uint64_t)&_kernelStart) / this->memory->PageSize()) + 1;
-    //this->LockPages(&_kernelStart, kernelPageCount);
+    this->bitmap = new Bitmap(bitmapBuffer, bitmapSize);
+    kMemoryDebug("Reserving bitmap");
+    this->ReservePages(bitmapBuffer, bitmapPageSize);
+    uint64_t kernelPageCount = (((uint64_t)&_kernelEnd - (uint64_t)&_kernelStart) / pageSize) + 1;
+    kMemoryDebug("Locking kernel");
+    // Lock the kernel, in case it isn't already.
+    this->LockPages(&_kernelStart, kernelPageCount);
+    //this->ReservePages((void*)0, 0xA0000); // Reserve the lower 640k of RAM, even if they aren't reserved by the memory map.
 
+    // Lock memory regions according to the memory map provided by UEFI
     for (uint64_t i = 0; i < entries; i++)
     {
         BootMemoryDescriptor *descriptor = (BootMemoryDescriptor *)((uint64_t)bootMemoryMap->MemoryMap + (i * bootMemoryMap->MemoryMapDescriptorSize));
@@ -73,10 +102,12 @@ PageAllocator::PageAllocator(Memory *memory)
         if (descriptor->PageCount == 0 || (uint64_t)descriptor->PhysicalAddress == 0xffffffffffffffff)
             continue;
         if (descriptor->Type == MDT_EFI_CONVENTIONAL_MEMORY_TYPE)
+        {
+            this->FreePages(descriptor->PhysicalAddress, descriptor->PageCount);
             continue;
+        }
         this->ReservePages(descriptor->PhysicalAddress, descriptor->PageCount);
     }
-    // Lock bitmap pages, and reserve non-conventional pages.
 }
 
 // From the page allocators view, there's no difference between reserved and allocated pages
@@ -86,15 +117,25 @@ PageAllocator::PageAllocator(Memory *memory)
 
 void *PageAllocator::AllocatePage()
 {
-    auto bitmapSize = this->bitmap.Size();
-    for (auto index = this->earliestKnownFreePage; index < bitmapSize; index++)
+    uint64_t bitmapSize = this->bitmap->Size();
+    uint64_t pageSize = this->memory->PageSize();
+    for (uint64_t index = earliestKnownFreePage; index < bitmapSize; index++)
     {
-        if (this->bitmap[index])
+        if ((*this->bitmap)[index])
+        {
             continue; // This page is allocated already;
-        this->earliestKnownFreePage = index;
-        void *newPage = (void *)(index * this->memory->PageSize());
+        }
+        kMemoryDebug(kToHexString(index * pageSize));
+        this->earliestKnownFreePage = index - 1;
+        void *newPage = (void *)(index * pageSize);
         this->LockPage(newPage); // Mark the page as allocated
         return newPage;
+    }
+
+    while (true)
+    {
+        kMemoryDebug("Unable to find a free page in memory! Kernel halted");
+        asm("hlt");
     }
 
     // Allocation failed (This is where the virtual memory manager will take over.)
@@ -104,9 +145,9 @@ void *PageAllocator::AllocatePage()
 void PageAllocator::LockPage(void *address)
 {
     uint64_t index = (uint64_t)address / this->memory->PageSize();
-    if (this->bitmap[index])
+    if ((*this->bitmap)[index])
         return;
-    if (!this->bitmap.Set(index))
+    if (!this->bitmap->Set(index))
         return;
     freeMemory -= this->memory->PageSize();
     usedMemory += this->memory->PageSize();
@@ -115,9 +156,9 @@ void PageAllocator::LockPage(void *address)
 void PageAllocator::FreePage(void *address)
 {
     uint64_t index = (uint64_t)address / this->memory->PageSize();
-    if (!this->bitmap[index])
+    if (!(*this->bitmap)[index])
         return;
-    if (!this->bitmap.Unset(index))
+    if (!this->bitmap->Unset(index))
         return;
     freeMemory += this->memory->PageSize();
     usedMemory -= this->memory->PageSize();
@@ -128,9 +169,9 @@ void PageAllocator::FreePage(void *address)
 void PageAllocator::ReservePage(void *address)
 {
     uint64_t index = (uint64_t)address / this->memory->PageSize();
-    if (this->bitmap[index])
+    if ((*this->bitmap)[index])
         return;
-    if (!this->bitmap.Set(index))
+    if (!this->bitmap->Set(index))
         return;
     freeMemory -= this->memory->PageSize();
     reservedMemory += this->memory->PageSize();
@@ -139,9 +180,9 @@ void PageAllocator::ReservePage(void *address)
 void PageAllocator::UnreservePage(void *address)
 {
     uint64_t index = (uint64_t)address / this->memory->PageSize();
-    if (!this->bitmap[index])
+    if (!(*this->bitmap)[index])
         return;
-    if (!this->bitmap.Unset(index))
+    if (!this->bitmap->Unset(index))
         return;
     freeMemory += this->memory->PageSize();
     reservedMemory -= this->memory->PageSize();
@@ -151,26 +192,30 @@ void PageAllocator::UnreservePage(void *address)
 
 void PageAllocator::FreePages(void *address, uint64_t count)
 {
+    auto baseAddress = (uint64_t)address;
     for (uint64_t x = 0; x < count; x++)
-        FreePage((void *)((uint64_t)address + (x * this->memory->PageSize())));
+        FreePage((void *)(baseAddress + (x * this->memory->PageSize())));
 }
 
 void PageAllocator::LockPages(void *address, uint64_t count)
 {
+    auto baseAddress = (uint64_t)address;
     for (uint64_t x = 0; x < count; x++)
-        LockPage((void *)((uint64_t)address + (x * this->memory->PageSize())));
+        LockPage((void *)(baseAddress + (x * this->memory->PageSize())));
 }
 
 void PageAllocator::ReservePages(void *address, uint64_t count)
 {
+    auto baseAddress = (uint64_t)address;
     for (uint64_t x = 0; x < count; x++)
-        ReservePage((void *)((uint64_t)address + (x * this->memory->PageSize())));
+        ReservePage((void *)(baseAddress + (x * this->memory->PageSize())));
 }
 
 void PageAllocator::UnreservePages(void *address, uint64_t count)
 {
+    auto baseAddress = (uint64_t)address;
     for (uint64_t x = 0; x < count; x++)
-        UnreservePage((void *)((uint64_t)address + (x * this->memory->PageSize())));
+        UnreservePage((void *)(baseAddress + (x * this->memory->PageSize())));
 }
 
 FreeMemoryInformation PageAllocator::GetFreeMemoryInformation()
@@ -178,6 +223,7 @@ FreeMemoryInformation PageAllocator::GetFreeMemoryInformation()
     return {this->freeMemory, this->reservedMemory, this->usedMemory};
 }
 
-Bitmap * PageAllocator::GetBitmap() {
-    return &this->bitmap;
+Bitmap *PageAllocator::GetBitmap()
+{
+    return this->bitmap;
 }

@@ -2,15 +2,41 @@
 #include <stddef.h>
 #include "interrupts.hpp"
 #include "../console/font.hpp"
+#include "../console/cstr.hpp"
 #include "../graphics/framebuffer.hpp"
+#include "apic.hpp"
+#include "../panic.hpp"
+
+#define BLUE 0x00FF0000
+#define WHITE 0x00FFFFFF
 
 __attribute__((interrupt)) void Interrupt_PageFaultHandler(struct interrupt_frame *frame)
 {
-    auto consoleFont = KernelConsoleFont::GetInstance();
-    //frameBuffer->Clear(0x000000ff);
-    consoleFont->DrawStringAt("Panic: Page fault", 0, 0, 0, 0x000000ff);
+    kPanic("An unrecoverable page fault has occured.\0");
+}
 
-    asm( "hlt" );
+__attribute__((interrupt)) void Interrupt_DoubleFaultHandler(struct interrupt_frame *frame) 
+{
+    kPanic("A double fault has occurred!\0");
+    while (true)
+        asm("hlt");
+}
+
+__attribute__((interrupt)) void Interrupt_GeneralProtectionFault(struct interrupt_frame *frame)
+{
+    kPanic("A general protection fault has occurred!\0");
+    while (true)
+        asm("hlt");
+}
+
+InputOutputPort KeyboardPort = InputOutputPort(0x60);
+
+__attribute__((interrupt)) void Interrupt_KeyboardInput(struct interrupt_frame *frame)
+{
+    KernelConsoleFont::GetInstance()->DrawStringAt("Key Pressed", 800, 500);
+    uint8_t scanCode = KeyboardPort.Read();
+    KernelConsoleFont::GetInstance()->DrawStringAt(kToString(scanCode), 800, 516);
+    EndPicInterruptPrimary();
 }
 
 void DisableInterrupts()

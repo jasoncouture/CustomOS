@@ -13,7 +13,7 @@ class VirtualAddressManager
         PageTableEntry* RootTable;
         bool FreeOnDestroy;
         static bool IsInitialized;
-        static VirtualAddressManager KernelVirtualAddressManager;
+        static VirtualAddressManager* KernelVirtualAddressManager;
 
 };
 

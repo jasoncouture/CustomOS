@@ -15,7 +15,7 @@
 #define BLACK 0x00000000
 #define WHITE 0x00FFFFFF
 
-void WriteDebugData(const char * description, uint64_t value, uint64_t lineNumber, bool hex = false)
+void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber, bool hex = false)
 {
     auto font = KernelConsoleFont::GetInstance();
     font->DrawStringAt("                                                                              ", 0, font->GetCharacterPixelHeight() * lineNumber);
@@ -25,14 +25,17 @@ void WriteDebugData(const char * description, uint64_t value, uint64_t lineNumbe
     const char *numericString = hex ? kToHexString(value) : kToString(value);
     font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
 }
+
 void kMain(KernelParameters *kernelParameters)
 {
+    uint8_t *test = NULL;
+    *test = 0;
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto font = KernelConsoleFont::GetInstance();
     auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
     font->DrawStringAt("Booting kernel (Early init)", 0, font->GetCharacterPixelHeight() * 0);
-    
+
     font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight() * 1);
     WriteDebugData("Total system memory:", memory->Size(), 2);
     WriteDebugData("Bytes free:", freeMemoryInfo.BytesFree, 3);
@@ -42,16 +45,6 @@ void kMain(KernelParameters *kernelParameters)
     auto bitmap = pageAllocator->GetBitmap();
     WriteDebugData("Bitmap located at:", (uint64_t)bitmap->GetBuffer(), 6, true);
     WriteDebugData("Bitmap size:", (uint64_t)bitmap->Size(), 7);
-
-    while(true) 
-    {
-        uint64_t yStart = 8;
-        for(auto x = 0xc0000; x < bitmap->Size(); x++) 
-        {
-            if(x % 10 == 0) // Stall a bit
-                for(auto y = 0ull; y < 10000; y++) ;
-            uint64_t line = yStart + (x%10);
-            WriteDebugData(kToHexString(x * 4096), (*bitmap)[x] ? 1 : 0, line);
-        }
-    }
+    while (true)
+        ;
 }

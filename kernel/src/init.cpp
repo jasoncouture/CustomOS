@@ -10,6 +10,7 @@
 #include "memory/gdt/gdt.hpp"
 #include "interrupts/idt.hpp"
 #include "interrupts/interrupts.hpp"
+#include "interrupts/apic.hpp"
 
 GlobalDescriptorLocation globalDescriptorLocation;
 
@@ -22,8 +23,7 @@ void kInitGlobalDesciptorTable()
 
 void kInitMemory(BootMemoryMap *bootMemoryMap)
 {
-    auto memory = Memory::Initialize(bootMemoryMap);
-    PageAllocator::Initialize(memory);
+    Memory::Initialize(bootMemoryMap);
 }
 
 void *PageToAddress(uint64_t page, uint64_t pageSize)
@@ -31,17 +31,22 @@ void *PageToAddress(uint64_t page, uint64_t pageSize)
     return (void *)(page * pageSize);
 }
 
+void kInitPageManager(FrameBuffer *frameBuffer) 
+{
+
+}
+
 void kInitVirtualMemory(FrameBuffer *frameBuffer)
 {
-    auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
+    auto pageAllocator = PageAllocator::Initialize(memory);
     auto memoryMap = memory->GetBootMemoryMap();
 
     // Move the framebuffer from "used" (if it was there) to "reserved" memory
     pageAllocator->FreePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
     pageAllocator->ReservePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
     // Setup the virtual memory manager.
-    auto virtualAddressManager = VirtualAddressManager::GetKernelVirtualAddressManager();
+    
     uint64_t pageSize = memory->PageSize();
     uint64_t memorySize = memory->Size();
     uint64_t memoryPageSize = memorySize / pageSize;
@@ -54,7 +59,7 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer)
 
     if (memorySize % pageSize)
         memoryPageSize++;
-
+    auto virtualAddressManager = VirtualAddressManager::GetKernelVirtualAddressManager();   
     // Identity map all memory.
     for (page = 0; page < memoryPageSize; page++)
         virtualAddressManager->Map(PageToAddress(page, pageSize), PageToAddress(page, pageSize));
@@ -97,30 +102,69 @@ void kInitInterrupts()
     pageFaultEntry->SetOffset((uint64_t)Interrupt_PageFaultHandler);
     pageFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
     pageFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
+
+    InterruptDescriptorTableEntry *doubleFaultEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0x8;
+    doubleFaultEntry->SetOffset((uint64_t)Interrupt_DoubleFaultHandler);
+    doubleFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
+    doubleFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
+
+    InterruptDescriptorTableEntry *generalProtectionFaultEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0xD;
+    generalProtectionFaultEntry->SetOffset((uint64_t)Interrupt_GeneralProtectionFault);
+    generalProtectionFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
+    generalProtectionFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
+
+    InterruptDescriptorTableEntry *keyboardEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0x21;
+    keyboardEntry->SetOffset((uint64_t)Interrupt_KeyboardInput);
+    keyboardEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
+    keyboardEntry->Selector = 0x08;
+
+
     // Load IDT
     asm("lidt %0"
         :
         : "m"(interruptDesciptorTableLocation));
+
+
+}
+
+void kInitApic() 
+{
+    InitApic();
+    // Unmask PIC Interrupts.
+    PIC1DataPort.Write(0b11111101);
+    PIC2DataPort.Write(0b11111111);
 }
 
 void kInit(KernelParameters *kernelParameters)
 {
-    kInitGlobalDesciptorTable();
+    DisableInterrupts();
     kInitFrameBuffer(kernelParameters->FrameBuffer);
-    kInitMemory(kernelParameters->BootMemoryMap);
-    kInitVirtualMemory(kernelParameters->FrameBuffer);
-    
     kInitConsoleFont(kernelParameters->Font);
     auto kernelFrameBuffer = KernelFrameBuffer::GetInstance();
     auto consoleFont = KernelConsoleFont::GetInstance();
-    consoleFont->DrawStringAt("Frame buffer initialized, initializing GDT", 0, consoleFont->GetCharacterPixelHeight() * 20);
+    
+    consoleFont->DrawStringAt("Framebuffer online, initializing memory", 0, consoleFont->GetCharacterPixelHeight() * 19);
+
+
+
+    kInitMemory(kernelParameters->BootMemoryMap);
+    consoleFont->DrawStringAt("Memory map loaded, building page map", 0, consoleFont->GetCharacterPixelHeight() * 20);
+    kInitPageManager(kernelParameters->FrameBuffer);
+    kInitVirtualMemory(kernelParameters->FrameBuffer);
+    kernelFrameBuffer->Clear(0);
+    // Restore the messages we just cleared.
+    consoleFont->DrawStringAt("Framebuffer online, initializing memory", 0, consoleFont->GetCharacterPixelHeight() * 19);
+    consoleFont->DrawStringAt("Memory map loaded, building page map", 0, consoleFont->GetCharacterPixelHeight() * 20);
+    consoleFont->DrawStringAt("Memory initialized, initializing GDT", 0, consoleFont->GetCharacterPixelHeight() * 21);
+    
     kInitGlobalDesciptorTable();
-    consoleFont->DrawStringAt("GDT Initialized.", 0, consoleFont->GetCharacterPixelHeight() * 21);
     kInitInterrupts();
+    kInitApic();
+    EnableInterrupts();
     consoleFont->DrawStringAt("Interrupts Initialized.", 0, consoleFont->GetCharacterPixelHeight() * 22);
 }
 
-extern "C" void __entry(struct KernelParameters *kernelParameters)
+extern "C" void __entry(KernelParameters *kernelParameters)
 {
     kInit(kernelParameters);
     kMain(kernelParameters);

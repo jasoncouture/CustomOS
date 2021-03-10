@@ -56,3 +56,13 @@ const char *kToHexString(uint64_t value)
 
     return stringConversionBuffer + stringStart;
 }
+
+uint64_t kStringLength(const char * str) {
+    unsigned char* buffer = (unsigned char*)((void*)str);
+    uint64_t size = 0;
+    while(*buffer != '\0') {
+        buffer++;
+        size++;
+    }
+    return size;
+}

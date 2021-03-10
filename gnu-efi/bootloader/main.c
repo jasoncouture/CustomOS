@@ -159,12 +159,13 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 		{
 		case PT_LOAD:
 		{
-			int segmentPagesRequired = (programHeader->p_memsz + 0x1000 + 1) / 0x1000; // Route memory size up to the nearest page boundary.
-			Elf64_Addr segment = programHeader->p_paddr;
-			Print(L"Loading segment: %016x\r\n", programHeader->p_paddr);
+			int segmentPagesRequired = (programHeader->p_memsz / 0x1000 + 1) / 0x1000; // Route memory size up to the nearest page boundary.
+			void* segment = (void*)programHeader->p_paddr;
+			Print(L"Loading segment: %016x (%016x bytes)\r\n", segment, programHeader->p_memsz);
+			systemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, segmentPagesRequired, segment); // Allocate the required pages
+			// Clear the memory to 0
+			SetMem((void*)segment, programHeader->p_memsz, 0);
 			
-			systemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderData, segmentPagesRequired, &segment); // Allocate the required pages
-
 			kernel->SetPosition(kernel, programHeader->p_offset); // Seek to the appropriate location in the kernel
 
 			UINTN size = programHeader->p_filesz;
@@ -265,6 +266,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	bootMemoryMap->MemoryMapDescriptorSize = descriptorSize;
 	kernelParameters->BootMemoryMap = bootMemoryMap;
 	// Time to terminate boot services.
+	Print(L"Exiting boot services and entering kernel. Farewell!\r\n");
 	systemTable->BootServices->ExitBootServices(imageHandle, mapKey);
 
 	// Transfer execution to the kernel.
