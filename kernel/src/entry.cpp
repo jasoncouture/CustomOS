@@ -28,8 +28,6 @@ void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber
 
 void kMain(KernelParameters *kernelParameters)
 {
-    uint8_t *test = NULL;
-    *test = 0;
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto font = KernelConsoleFont::GetInstance();

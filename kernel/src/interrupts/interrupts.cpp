@@ -12,21 +12,17 @@
 
 __attribute__((interrupt)) void Interrupt_PageFaultHandler(struct interrupt_frame *frame)
 {
-    kPanic("An unrecoverable page fault has occured.\0");
+    kPanic("An unrecoverable page fault has occured.");
 }
 
 __attribute__((interrupt)) void Interrupt_DoubleFaultHandler(struct interrupt_frame *frame) 
 {
-    kPanic("A double fault has occurred!\0");
-    while (true)
-        asm("hlt");
+    kPanic("A double fault has occurred!");
 }
 
 __attribute__((interrupt)) void Interrupt_GeneralProtectionFault(struct interrupt_frame *frame)
 {
-    kPanic("A general protection fault has occurred!\0");
-    while (true)
-        asm("hlt");
+    kPanic("A general protection fault has occurred!");
 }
 
 InputOutputPort KeyboardPort = InputOutputPort(0x60);

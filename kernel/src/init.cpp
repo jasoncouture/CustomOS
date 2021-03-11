@@ -45,6 +45,8 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer)
     // Move the framebuffer from "used" (if it was there) to "reserved" memory
     pageAllocator->FreePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
     pageAllocator->ReservePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
+    pageAllocator->ReservePages((void*)0, 4096); // Reserve the first 1MB of ram, it seems EFI doesn't report this in the memory map, but when we write to
+    // address 0xb0000-
     // Setup the virtual memory manager.
     
     uint64_t pageSize = memory->PageSize();
@@ -67,14 +69,6 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer)
     // Frame buffer might lie outside of memory space, so make sure it's mapped into virtual memory as well.
     for (page = 0; page < frameBufferPageCount; page++)
         virtualAddressManager->Map(PageToAddress(page + frameBufferStart, pageSize), PageToAddress(page + frameBufferStart, pageSize));
-
-    uint64_t entries = memoryMap->MemoryMapSize / memoryMap->MemoryMapDescriptorSize;
-    for (uint64_t i = 0; i < entries; i++)
-    {
-        BootMemoryDescriptor *descriptor = (BootMemoryDescriptor *)((uint64_t)memoryMap->MemoryMap + (i * memoryMap->MemoryMapDescriptorSize));
-        if(descriptor->PageCount == 0 || (uint64_t)descriptor->PhysicalAddress == 0xffffffffffffffff) continue;
-        virtualAddressManager->Map(memoryMap->MemoryMap->VirtualAddress, memoryMap->MemoryMap->PhysicalAddress);
-    }
 
     // And activate our virtual memory map.
     virtualAddressManager->Activate();
@@ -140,6 +134,7 @@ void kInit(KernelParameters *kernelParameters)
     DisableInterrupts();
     kInitFrameBuffer(kernelParameters->FrameBuffer);
     kInitConsoleFont(kernelParameters->Font);
+    kInitGlobalDesciptorTable();
     auto kernelFrameBuffer = KernelFrameBuffer::GetInstance();
     auto consoleFont = KernelConsoleFont::GetInstance();
     
@@ -151,13 +146,10 @@ void kInit(KernelParameters *kernelParameters)
     consoleFont->DrawStringAt("Memory map loaded, building page map", 0, consoleFont->GetCharacterPixelHeight() * 20);
     kInitPageManager(kernelParameters->FrameBuffer);
     kInitVirtualMemory(kernelParameters->FrameBuffer);
-    kernelFrameBuffer->Clear(0);
     // Restore the messages we just cleared.
     consoleFont->DrawStringAt("Framebuffer online, initializing memory", 0, consoleFont->GetCharacterPixelHeight() * 19);
     consoleFont->DrawStringAt("Memory map loaded, building page map", 0, consoleFont->GetCharacterPixelHeight() * 20);
-    consoleFont->DrawStringAt("Memory initialized, initializing GDT", 0, consoleFont->GetCharacterPixelHeight() * 21);
-    
-    kInitGlobalDesciptorTable();
+    consoleFont->DrawStringAt("Memory initialized, initializing Interrupts", 0, consoleFont->GetCharacterPixelHeight() * 21);
     kInitInterrupts();
     kInitApic();
     EnableInterrupts();
