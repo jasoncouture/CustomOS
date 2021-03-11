@@ -8,7 +8,7 @@ CC = gcc
 ASMC = nasm
 LD = ld
 
-CFLAGS = -ffreestanding -fshort-wchar -fno-inline -fno-exceptions -fno-unwind-tables -I../common/include
+CFLAGS = -ffreestanding -fshort-wchar -fno-inline -fno-exceptions -fno-unwind-tables -g -I../common/include
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib
 ASMFLAGS = -f elf64
 

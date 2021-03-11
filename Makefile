@@ -47,3 +47,9 @@ run: diskimage
 
 winrun: diskimage
 	@ ./run.bat
+
+windebug: diskimage
+	@ ./debug.bat
+
+vsdebug: diskimage
+	@ ./vsdebug.bat
