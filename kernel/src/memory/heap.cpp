@@ -1,63 +1,259 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "memory.hpp"
-// 32 MB early fixed size heap.
-#define EARLY_HEAP_SIZE 0x2000000
+#include "heap.hpp"
+#include "paging/virtualaddressmanager.hpp"
+#include "pageallocator.hpp"
 
-uint8_t *heapHead = NULL;
+#define EARLY_HEAP_SIZE 0x10000
+#define MINIMUM_ALLOCATION_UNIT 24
+#define HEAP_VIRTUAL_ADDRESS_BASE 0x10000000000
+
+HeapSegment *heapHead = NULL;
+void *heapEnd = NULL;
+__attribute__((aligned(0x1000)))
 uint8_t heap[EARLY_HEAP_SIZE];
-void* kMallocForever(size_t size) 
+
+bool canExpandHeap = false;
+
+void InitializeHeap(VirtualAddressManager *virtualAddressManager, PageAllocator *pageAllocator)
 {
+    // The first thing we need to do, is find some obscene address area that no one is using,
+    // and map our existing heap there.
+    // From there, we need to update our existing pointer to point to that.
+    // After that, we set a flag to indicate it's now OK to expand the heap.
+    auto heapPages = EARLY_HEAP_SIZE / pageAllocator->PageSize();
+    if (EARLY_HEAP_SIZE % pageAllocator->PageSize())
+        heapPages += 1;
+    uint8_t *heapBaseStart = (uint8_t *)heapHead;
+    // Remap the early heap into the new virtual address space.
+    for (uint64_t x = 0; x < heapPages; x++)
+    {
+        auto pageOffset = x * pageAllocator->PageSize();
+        virtualAddressManager->Map((void *)(HEAP_VIRTUAL_ADDRESS_BASE + pageOffset), (heapBaseStart + pageOffset));
+    }
+    // Redirect our heap to it's new home.
+    heapHead = (HeapSegment *)HEAP_VIRTUAL_ADDRESS_BASE;
+    heapEnd = (void *)(HEAP_VIRTUAL_ADDRESS_BASE + EARLY_HEAP_SIZE);
+    canExpandHeap = true;
+}
+
+void ExpandHeap(size_t size)
+{
+    size = size + sizeof(HeapSegment);
+    auto pageAllocator = PageAllocator::GetInstance();
+    auto virtualAddressManager = VirtualAddressManager::GetKernelVirtualAddressManager();
+    auto lastSegment = heapHead;
+    // Get the last segment.
+    while (lastSegment->Next != NULL)
+        lastSegment = lastSegment->Next;
+
+    if (size % pageAllocator->PageSize())
+    {
+        size -= size % pageAllocator->PageSize();
+        size += pageAllocator->PageSize();
+    }
+
+    auto sizeInPages = size / pageAllocator->PageSize();
+    uint8_t *currentHeapEnd = (uint8_t *)heapEnd;
+    for (uint64_t x = 0; x < sizeInPages; x++)
+    {
+        // Grow the heap, one page at a time, mapping it onto the end of our current heap.
+        virtualAddressManager->Map(currentHeapEnd + (x * pageAllocator->PageSize()), pageAllocator->AllocatePage());
+    }
+    // Zero out our newly allocated memory.
+    memset(heapEnd, 0, size);
+    // If the last segment isn't free, create a new segment at the end.
+    if (!lastSegment->GetFlag(HeapSegmentFlag::IsFree))
+    {
+        lastSegment->Next = (HeapSegment *)heapEnd;
+        lastSegment->Next->Previous = lastSegment;
+        lastSegment->Next->Length = size - sizeof(HeapSegment);
+        lastSegment->Next->SetFlag(HeapSegmentFlag::IsFree);
+        lastSegment->Next->SetFlag(HeapSegmentFlag::Valid);
+        lastSegment = lastSegment->Next;
+    }
+    else
+    {
+        // otherwise we can just update the size of the last segment :)
+        lastSegment->Length = lastSegment->Length + size;
+    }
+    heapEnd = currentHeapEnd + sizeInPages;
+}
+
+size_t GetEarlyHeapSize()
+{
+    return EARLY_HEAP_SIZE;
+}
+void *GetHeapBase()
+{
+    return (void *)heap;
+}
+
+void HeapSegment::SetFlag(HeapSegmentFlag flag, bool value)
+{
+    if (value)
+        this->SetFlag(flag);
+    else
+        this->ClearFlag(flag);
+}
+
+void HeapSegment::ClearFlag(HeapSegmentFlag flag)
+{
+    uint8_t bitSelector = (uint8_t)1 << flag;
+    this->Flags &= ~bitSelector;
+}
+
+void HeapSegment::SetFlag(HeapSegmentFlag flag)
+{
+    uint8_t bitSelector = (uint8_t)1 << flag;
+    this->Flags |= bitSelector;
+}
+
+bool HeapSegment::GetFlag(HeapSegmentFlag flag)
+{
+    uint8_t bitSelector = (uint8_t)1 << flag;
+    return (bool)(this->Flags & bitSelector);
+}
+
+void HeapSegment::CombineWithNext()
+{
+    if (this->Next == NULL)
+        return;
+    this->Next->CombineWithPrevious();
+}
+
+// After calling this, the current segment may no longer be valid. Don't use it.
+void HeapSegment::CombineWithPrevious()
+{
+    if (this->Previous == NULL)
+        return;
+    // Both segments must be free.
+    if (!this->GetFlag(HeapSegmentFlag::IsFree))
+        return;
+    if (!this->Previous->GetFlag(HeapSegmentFlag::IsFree))
+        return;
+    // Walk as far as we can, before we combine ourselves.
+    if (this->Next != NULL)
+    {
+        this->Next->Previous = this->Previous;
+    }
+    this->Previous->Length = this->Previous->Length + this->Length + sizeof(HeapSegment);
+    this->Previous->Next = this->Next;
+
+    // We're no longer valid at this point.
+}
+
+void InitEarlyHeap()
+{
+    if (heapHead == NULL)
+    {
+        memset(heap, 0, EARLY_HEAP_SIZE);
+        heapHead = (HeapSegment *)heap;
+        heapEnd = (void *)((uint8_t *)heap + EARLY_HEAP_SIZE);
+        // We zeroed all memory, so we only have to set length and flags since we want everything to be NULL.
+        heapHead->Length = EARLY_HEAP_SIZE - sizeof(HeapSegment);
+        heapHead->SetFlag(HeapSegmentFlag::IsFree);
+        heapHead->SetFlag(HeapSegmentFlag::Valid); // Valid is used as a guard against heap corruption.
+    }
+}
+
+void *HeapSegment::Address()
+{
+    return (void *)(((uint8_t *)this) + sizeof(HeapSegment));
+}
+
+HeapSegment *HeapSegment::Split(size_t size)
+{
+    // There wouldn't be a worthwhile amount of space left after a split
+    // just use this segment as is.
+    if ((size + sizeof(HeapSegment) + MINIMUM_ALLOCATION_UNIT) > this->Length)
+        return this;
+    // Create a new entry, size bytes ahead of us and insert it into the linked list.
+    auto next = (HeapSegment *)((uint8_t *)this->Address() + size);
+    memset(next, 0, sizeof(HeapSegment));
+    next->Length = this->Length - sizeof(HeapSegment) - size;
+    next->SetFlag(HeapSegmentFlag::Valid);
+    next->SetFlag(HeapSegmentFlag::IsFree);
+    next->Previous = this;
+    this->Length = size;
+    if (this->Next)
+    {
+        // If we had a next, update it's previous to be this inserted node
+        this->Next->Previous = next;
+        // and update the new nodes next to be our current next.
+        next->Next = this->Next;
+    }
+    // and finally update our next to be the newly inserted next.
+    this->Next = next;
+    // and return ourselves as the newly split node.
+    return this;
+}
+
+void *malloc(size_t size)
+{
+    if(size == 0) return NULL;
     // There's no way to handle sizes larger than the max pre-allocated size.
-    if(size > EARLY_HEAP_SIZE) 
+    if (size > EARLY_HEAP_SIZE)
         return NULL;
     // We haven't been called before, set the initial pointer.
-    if(heapHead == NULL) 
+    if (heapHead == NULL)
     {
-        heapHead = heap;
-        memset(heapHead, 0, EARLY_HEAP_SIZE);
+        InitEarlyHeap();
     }
-    // We don't have enough space for Size
-    if((uint64_t)heapHead + size > (((uint64_t)heap) + EARLY_HEAP_SIZE)) 
+
+    HeapSegment *current = heapHead;
+    while (current != NULL)
+    {
+        if (current->GetFlag(HeapSegmentFlag::IsFree))
+        {
+            if (current->Length > size)
+            {
+                auto target = current->Split(size);
+                target->ClearFlag(HeapSegmentFlag::IsFree);
+                return target->Address();
+            }
+            else if (current->Length == size)
+            {
+                current->ClearFlag(HeapSegmentFlag::IsFree);
+                return current->Address();
+            }
+        }
+
+        current = current->Next;
+    }
+
+    if (!canExpandHeap)
         return NULL;
-    // Grab the current pointer
-    uint8_t *allocatedSpace = heapHead;
-    // Advance the pointer by size
-    heapHead = heapHead + size;
-
-    // and return the preivously captured pointer.
-    return allocatedSpace;
+    // We need more heap space!
+    ExpandHeap(size);
+    return malloc(size);
 }
 
-typedef void* (*MemoryAllocator)(size_t size);
+void *kmalloc(size_t size) { return malloc(size); }
 
-MemoryAllocator DefaultMemoryAllocator = kMallocForever;
-
-void * operator new(size_t size) 
-{ 
-    void * p = DefaultMemoryAllocator(size);
-    memset(p, 0, size);
-    return p; 
-}
-
-void * operator new[](size_t size)
+void free(void *address)
 {
-    void * p = DefaultMemoryAllocator(size); 
-    memset(p, 0, size);
-    return p;
+    auto segment = (HeapSegment *)((uint8_t *)address - sizeof(HeapSegment));
+    if (!segment->GetFlag(HeapSegmentFlag::Valid))
+        return;
+    if (segment->GetFlag(HeapSegmentFlag::IsFree))
+        return;
+
+    segment->SetFlag(HeapSegmentFlag::IsFree);
+    segment->CombineWithNext();
+    segment->CombineWithPrevious();
 }
 
-void operator delete(void *p) 
+void *calloc(size_t count, size_t size)
 {
-
+    auto pointer = malloc(count * size);
+    memset(pointer, 0, count * size);
+    return pointer;
 }
 
-void operator delete[](void *p)
-{
-    // By default, we're using kMallocForever, so these do nothing
-    // and you shouldn't be using new/delete with these.... Just new..
-}
-
-void operator delete(void *p, uint64_t size) 
-{
-}
+void *operator new(size_t size) { return calloc(1, size); }
+void *operator new[](size_t size) { return calloc(1, size); }
+void operator delete(void *p) { free(p); }
+void operator delete[](void *p) { free(p); }
+void operator delete(void *p, uint64_t size) { free(p); }

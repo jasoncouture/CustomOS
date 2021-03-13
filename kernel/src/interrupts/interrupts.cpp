@@ -25,13 +25,12 @@ __attribute__((interrupt)) void Interrupt_GeneralProtectionFault(struct interrup
     kPanic("A general protection fault has occurred!");
 }
 
-InputOutputPort KeyboardPort = InputOutputPort(0x60);
-
 __attribute__((interrupt)) void Interrupt_KeyboardInput(struct interrupt_frame *frame)
 {
     KernelConsoleFont::GetInstance()->DrawStringAt("Key Pressed", 800, 500);
-    uint8_t scanCode = KeyboardPort.Read();
-    KernelConsoleFont::GetInstance()->DrawStringAt(kToString(scanCode), 800, 516);
+    uint8_t scanCode = KeyboardPort->Read();
+    KernelConsoleFont::GetInstance()->DrawStringAt("  ", 800, 516);
+    KernelConsoleFont::GetInstance()->DrawStringAt(kToHexString(scanCode), 800, 516);
     EndPicInterruptPrimary();
 }
 

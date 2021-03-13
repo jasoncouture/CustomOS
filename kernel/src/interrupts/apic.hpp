@@ -11,12 +11,14 @@
 #define ICW1_INIT 0x10
 #define ICW1_ICW4 0x01
 #define ICW4_8086 0x01
-extern InputOutputPort PIC1CommandPort;
-extern InputOutputPort PIC1DataPort;
+extern InputOutputPort* PIC1CommandPort;
+extern InputOutputPort* PIC1DataPort;
 
-extern InputOutputPort PIC2CommandPort;
-extern InputOutputPort PIC2DataPort;
+extern InputOutputPort* PIC2CommandPort;
+extern InputOutputPort* PIC2DataPort;
+extern InputOutputPort* KeyboardPort;
 
+void InitPorts();
 void InitApic();
 void EndPicInterruptPrimary();
 void EndPicInterruptSecondary();

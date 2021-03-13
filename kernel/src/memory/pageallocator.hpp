@@ -37,7 +37,7 @@ class PageAllocator
         void UnreservePage(void* address);
         void UnreservePages(void* address, uint64_t count);
 
-        void* AllocatePage();
+        void* AllocatePage(bool zero = true);
 
         FreeMemoryInformation GetFreeMemoryInformation();
         Bitmap* GetBitmap();
