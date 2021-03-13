@@ -5,7 +5,7 @@ class Memory
 {
     private:
         BootMemoryMap* bootMemoryMap;
-        static Memory Instance;
+        static Memory* Instance;
         uint64_t memorySizeBytes;
         Memory(BootMemoryMap* BootMemoryMap);
     

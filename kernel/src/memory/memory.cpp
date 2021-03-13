@@ -2,7 +2,7 @@
 
 #define PAGE_SIZE 0x1000
 
-Memory Memory::Instance = 0;
+Memory *Memory::Instance = NULL;
 
 uint64_t ComputeSize(BootMemoryMap *bootMemoryMap) 
 {
@@ -28,13 +28,16 @@ Memory::Memory(BootMemoryMap *bootMemoryMap)
 
 Memory *Memory::GetInstance()
 {
-    return &Instance;
+    return Instance;
 }
 
 Memory *Memory::Initialize(BootMemoryMap *bootMemoryMap)
 {
-    Instance = Memory(bootMemoryMap);
-    return &Instance;
+    if(Instance == NULL) 
+    {
+        Instance = new Memory(bootMemoryMap);
+    }
+    return Instance;
 }
 uint64_t Memory::PageSize()
 {
