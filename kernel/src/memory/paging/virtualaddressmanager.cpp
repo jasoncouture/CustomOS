@@ -90,51 +90,6 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
 
         previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
     }
-
-    // PageTableEntry pageDirectoryEntry = previousTable[TopLevelDirectoryPointerIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
-    // if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
-    // {
-    //     PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
-    //     memset(pageDirectoryPointer, 0, pageSize);
-    //     pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
-    //     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
-    //     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-    //     previousTable[TopLevelDirectoryPointerIndex] = pageDirectoryEntry;
-    // }
-
-    // previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
-
-    // pageDirectoryEntry = previousTable[PageDirectoryIndex];
-    // if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
-    // {
-    //     PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
-    //     memset(pageDirectoryPointer, 0, pageSize);
-    //     pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
-    //     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
-    //     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-    //     previousTable[PageDirectoryIndex] = pageDirectoryEntry;
-    // }
-
-    // previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
-
-    // pageDirectoryEntry = previousTable[PageTableIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
-    // if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
-    // {
-    //     PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
-    //     memset(pageDirectoryPointer, 0, pageSize);
-    //     pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
-    //     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
-    //     pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-    //     previousTable[PageTableIndex] = pageDirectoryEntry;
-    // }
-
-    // previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
-
-    // pageDirectoryEntry = previousTable[PageIndex]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
-    // pageDirectoryEntry.SetAddress((uint64_t)physicalAddress);
-    // pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
-    // pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-    // previousTable[PageIndex] = pageDirectoryEntry;
 }
 
 void VirtualAddressManager::Activate()
@@ -154,12 +109,3 @@ VirtualAddressManager *VirtualAddressManager::GetKernelVirtualAddressManager()
     }
     return KernelVirtualAddressManager;
 }
-
-// VirtualAddressManager::~VirtualAddressManager()
-// {
-//     if (this->FreeOnDestroy)
-//     {
-//         auto pageAllocator = PageAllocator::GetInstance();
-//         pageAllocator->FreePage(this->RootTable);
-//     }
-// }
