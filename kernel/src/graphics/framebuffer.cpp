@@ -86,7 +86,7 @@ KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
 
 void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, const unsigned int color)
 {
-    
+
     FrameBuffer *frameBuffer = this->kFrameBufferInfo.FrameBuffer;
     if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || this->kFrameBufferInfo.BytesPerPixel == 0)
         return;
@@ -98,7 +98,8 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     uint8_t *colorData = (uint8_t *)&localColor;
     uint64_t frameBufferOffset = (x * this->kFrameBufferInfo.BytesPerPixel) + (y * this->kFrameBufferInfo.BytesPerPixel * frameBuffer->PixelsPerScanLine);
     // If we'd go out of the framebuffer bounds, don't.
-    if(frameBufferOffset + this->kFrameBufferInfo.BytesPerPixel > frameBuffer->Size) return;
+    if (frameBufferOffset + this->kFrameBufferInfo.BytesPerPixel > frameBuffer->Size)
+        return;
     uint8_t *buffer = (uint8_t *)frameBuffer->BaseAddress;
 
     DirectWritePixel(buffer + frameBufferOffset, colorData, &this->kFrameBufferInfo);
@@ -115,10 +116,12 @@ void KernelFrameBuffer::Clear(const unsigned int color)
     }
 }
 
-unsigned int KernelFrameBuffer::GetWidth() {
+unsigned int KernelFrameBuffer::GetWidth()
+{
     return this->kFrameBufferInfo.FrameBuffer->Width;
 }
 
-unsigned int KernelFrameBuffer::GetHeight() {
+unsigned int KernelFrameBuffer::GetHeight()
+{
     return this->kFrameBufferInfo.FrameBuffer->Height;
 }
