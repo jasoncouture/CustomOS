@@ -192,7 +192,8 @@ HeapSegment *HeapSegment::Split(size_t size)
 
 void *malloc(size_t size)
 {
-    if(size == 0) return NULL;
+    if (size == 0)
+        return NULL;
     // There's no way to handle sizes larger than the max pre-allocated size.
     if (size > EARLY_HEAP_SIZE)
         return NULL;
@@ -231,6 +232,25 @@ void *malloc(size_t size)
 }
 
 void *kmalloc(size_t size) { return malloc(size); }
+
+void *realloc(void *pointer, size_t size)
+{
+    if (size == 0)
+        return NULL;
+    if (pointer == NULL)
+        return malloc(size);
+    auto heapSegment = (HeapSegment *)((uint8_t *)pointer - sizeof(HeapSegment));
+    size_t sizeToCopy = heapSegment->Length;
+    if (sizeToCopy > size)
+        sizeToCopy = size;
+    void *returnValue = malloc(size);
+    if (sizeToCopy)
+    {
+        memcopy(pointer, returnValue, sizeToCopy);
+    }
+    free(pointer);
+    return returnValue;
+}
 
 void free(void *address)
 {

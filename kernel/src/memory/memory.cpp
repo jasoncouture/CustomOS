@@ -60,3 +60,12 @@ void memset(void* memoryLocation, uint8_t value, size_t size)
     for(size_t i = 0; i < size; i++)
         buffer[i] = value;
 }
+
+void memcopy(void* source, void* destination, size_t size) 
+{
+    uint8_t* sourceBuffer = (uint8_t*)source;
+    uint8_t* destinationBuffer = (uint8_t*)destination;
+
+    for(size_t x =0; x < size; x++) 
+        *(destinationBuffer + x) = *(sourceBuffer + x);
+}

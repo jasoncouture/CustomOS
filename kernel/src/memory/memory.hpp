@@ -19,3 +19,4 @@ class Memory
 
 
 void memset(void* memoryLocation, uint8_t value, size_t size);
+void memcopy(void* source, void* destination, size_t size);

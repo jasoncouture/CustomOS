@@ -28,5 +28,6 @@ struct HeapSegment {
 void* kmalloc(size_t size);
 void* calloc(size_t count, size_t size);
 void* malloc(size_t size);
+void* realloc(void* pointer, size_t size);
 void free(void* address);
 void InitializeHeap(VirtualAddressManager *virtualAddressManager, PageAllocator *pageAllocator);
