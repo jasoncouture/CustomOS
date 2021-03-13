@@ -1,7 +1,6 @@
 #pragma once
 #include "../graphics/framebuffer.hpp"
 #include <font.h>
-#include "zap-light-16.hpp"
 
 class KernelConsoleFont {
     private:
@@ -9,13 +8,10 @@ class KernelConsoleFont {
         unsigned int backgroundColor = 0x00000000;
         KernelFrameBuffer* surface;
         Font* font;
-
-        KernelConsoleFont();
-        static Font FontInstance;
-        static KernelConsoleFont Instance;
+        
+        static KernelConsoleFont* Instance;
     
     public:
-        static KernelConsoleFont* InitializeInstance();
         static KernelConsoleFont* InitializeInstance(Font* font);
         static KernelConsoleFont* GetInstance();
 

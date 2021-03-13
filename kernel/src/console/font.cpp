@@ -1,26 +1,15 @@
 #include "font.hpp"
 #include "../graphics/framebuffer.hpp"
 
-KernelConsoleFont KernelConsoleFont::Instance;
-Font KernelConsoleFont::FontInstance;
-
-KernelConsoleFont::KernelConsoleFont() {}
-
-KernelConsoleFont *KernelConsoleFont::InitializeInstance()
-{
-    struct FontHeader * fontHeader = (struct FontHeader *)(void *)zap_light16_psf;
-    FontInstance.Header = fontHeader;
-    FontInstance.GlyphBuffer = ((char*)zap_light16_psf) + sizeof(struct FontHeader);
-    return KernelConsoleFont::InitializeInstance(&FontInstance);
-}
+KernelConsoleFont* KernelConsoleFont::Instance = NULL;
 
 KernelConsoleFont *KernelConsoleFont::InitializeInstance(Font* font) 
 {
-    KernelConsoleFont::Instance = KernelConsoleFont(font, KernelFrameBuffer::GetInstance());
-    return &KernelConsoleFont::Instance;
+    KernelConsoleFont::Instance = new KernelConsoleFont(font, KernelFrameBuffer::GetInstance());
+    return KernelConsoleFont::Instance;
 }
 
-KernelConsoleFont *KernelConsoleFont::GetInstance() { return &KernelConsoleFont::Instance; }
+KernelConsoleFont *KernelConsoleFont::GetInstance() { return KernelConsoleFont::Instance; }
 
 KernelConsoleFont::KernelConsoleFont(Font *font, KernelFrameBuffer *kernelFrameBuffer)
 {
