@@ -8,6 +8,7 @@
 #include "console/cstr.hpp"
 #include "memory/paging/virtualaddressmanager.hpp"
 #include "memory/gdt/gdt.hpp"
+#include "memory/heap.hpp"
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -31,7 +32,7 @@ void kMain(KernelParameters *kernelParameters)
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto font = KernelConsoleFont::GetInstance();
-
+    auto frameBuffer = KernelFrameBuffer::GetInstance();
     font->DrawStringAt("Booting kernel (Early init)", 0, font->GetCharacterPixelHeight() * 0);
 
     font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight() * 1);
@@ -39,9 +40,19 @@ void kMain(KernelParameters *kernelParameters)
     auto bitmap = pageAllocator->GetBitmap();
     WriteDebugData("Bitmap located at:", (uint64_t)bitmap->GetBuffer(), 6, true);
     WriteDebugData("Bitmap size:", (uint64_t)bitmap->Size(), 7);
+    for (auto x = 0; x < 100000000; x++)
+    {
+    }
     while (true)
     {
         auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
+        WriteDebugData("Total system memory:", memory->Size(), 2);
+        WriteDebugData("Bytes free:", freeMemoryInfo.BytesFree, 3);
+        WriteDebugData("Bytes used:", freeMemoryInfo.BytesUsed, 4);
+        WriteDebugData("Bytes reserved:", freeMemoryInfo.BytesReserved, 5);
+        auto aPointer = malloc(16);
+
+        freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
         WriteDebugData("Total system memory:", memory->Size(), 2);
         WriteDebugData("Bytes free:", freeMemoryInfo.BytesFree, 3);
         WriteDebugData("Bytes used:", freeMemoryInfo.BytesUsed, 4);

@@ -67,12 +67,23 @@ KernelFrameBuffer *KernelFrameBuffer::GetInstance()
     return KernelFrameBuffer::GlobalSurface;
 }
 
-void KernelFrameBuffer::DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBufferInfo *kernelFrameBuffer)
+uint64_t DeviceColorFromKernelColor (uint64_t kernelColor, KernelFrameBufferInfo *kernelFrameBufferInfo) 
 {
-    buffer[kernelFrameBuffer->RedPosition / 8] = colorDataBuffer[0];
-    buffer[kernelFrameBuffer->GreenPosition / 8] = colorDataBuffer[1];
-    buffer[kernelFrameBuffer->BluePosition / 8] = colorDataBuffer[2];
+    uint64_t deviceColor = 0;
+    uint8_t* buffer = (uint8_t*)(void*)&deviceColor;
+    uint8_t* colorDataBuffer = (uint8_t*)(void*)&kernelColor;
+    buffer[kernelFrameBufferInfo->RedPosition / 8] = colorDataBuffer[0];
+    buffer[kernelFrameBufferInfo->GreenPosition / 8] = colorDataBuffer[1];
+    buffer[kernelFrameBufferInfo->BluePosition / 8] = colorDataBuffer[2];
+    return deviceColor;
 }
+
+void KernelFrameBuffer::DirectWritePixel(uint64_t *buffer, uint64_t deviceColor)
+{
+    *buffer = deviceColor;
+}
+
+
 
 KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
 {
@@ -90,15 +101,13 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     // In this case, * bytes per pixel
     // Cast to a unsigned int (32 bit) pointer
     // Dereferenced, and assigned the value provided
-    unsigned int localColor = color;
-    uint8_t *colorData = (uint8_t *)&localColor;
     uint64_t frameBufferOffset = (x * this->kFrameBufferInfo->BytesPerPixel) + (y * this->kFrameBufferInfo->BytesPerPixel * frameBuffer->PixelsPerScanLine);
     // If we'd go out of the framebuffer bounds, don't.
     if (frameBufferOffset + this->kFrameBufferInfo->BytesPerPixel > frameBuffer->Size)
         return;
-    uint8_t *buffer = (uint8_t *)frameBuffer->BaseAddress;
-
-    DirectWritePixel(buffer + frameBufferOffset, colorData, this->kFrameBufferInfo);
+    uint64_t *buffer = (uint64_t *)((uint8_t*)frameBuffer->BaseAddress + frameBufferOffset);
+    uint64_t deviceColor =  DeviceColorFromKernelColor(color, this->kFrameBufferInfo);
+    this->DirectWritePixel(buffer, deviceColor);
 }
 
 void KernelFrameBuffer::Clear(const unsigned int color)

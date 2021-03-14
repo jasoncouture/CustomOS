@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <framebuffer.h>
 #include "../memory/pageallocator.hpp"
+#include "../locks/lock.hpp"
 
 struct KernelFrameBufferInfo
 {
@@ -21,10 +22,10 @@ struct KernelFrameBufferInfo
 class KernelFrameBuffer 
 {
     private:
+        Lock *FrameBufferLock;
         KernelFrameBufferInfo* kFrameBufferInfo;
         static KernelFrameBuffer* GlobalSurface;
-
-        void DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBufferInfo *kernelFrameBuffer);
+        void DirectWritePixel(uint64_t *buffer, uint64_t deviceColor);
 
     public:
         KernelFrameBuffer(FrameBuffer* frameBuffer);

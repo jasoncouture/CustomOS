@@ -33,8 +33,22 @@ void InitializeHeap(VirtualAddressManager *virtualAddressManager, PageAllocator 
         virtualAddressManager->Map((void *)(HEAP_VIRTUAL_ADDRESS_BASE + pageOffset), (heapBaseStart + pageOffset));
     }
     // Redirect our heap to it's new home.
+    
     heapHead = (HeapSegment *)HEAP_VIRTUAL_ADDRESS_BASE;
     heapEnd = (void *)(HEAP_VIRTUAL_ADDRESS_BASE + EARLY_HEAP_SIZE);
+
+    auto current = heapHead;
+
+    // Fix all the pointers in the current heap.
+    while(current != NULL) {
+        if(current->Next != NULL) {
+            current->Next = (HeapSegment*)((uint8_t*)current + sizeof(HeapSegment)+current->Length);
+            current->Next->Previous = current;
+        }
+        // We don't have to worry about Previous, because Previous is fixed by Next.
+        current = current->Next;
+    }
+
     canExpandHeap = true;
 }
 
@@ -47,6 +61,9 @@ void ExpandHeap(size_t size)
     // Get the last segment.
     while (lastSegment->Next != NULL)
         lastSegment = lastSegment->Next;
+    if(lastSegment->GetFlag(HeapSegmentFlag::IsFree))
+        size -= lastSegment->Length + sizeof(HeapSegment);
+    if(size < (pageAllocator->PageSize() * 4)) size = pageAllocator->PageSize() * 4;
 
     if (size % pageAllocator->PageSize())
     {
@@ -54,18 +71,22 @@ void ExpandHeap(size_t size)
         size += pageAllocator->PageSize();
     }
 
+    
+
     auto sizeInPages = size / pageAllocator->PageSize();
     uint8_t *currentHeapEnd = (uint8_t *)heapEnd;
     for (uint64_t x = 0; x < sizeInPages; x++)
     {
         // Grow the heap, one page at a time, mapping it onto the end of our current heap.
-        virtualAddressManager->Map(currentHeapEnd + (x * pageAllocator->PageSize()), pageAllocator->AllocatePage());
+        virtualAddressManager->Map(currentHeapEnd + (x * pageAllocator->PageSize()), pageAllocator->AllocatePage(false));
     }
-    // Zero out our newly allocated memory.
-    memset(heapEnd, 0, size);
+    virtualAddressManager->Activate();
+    
     // If the last segment isn't free, create a new segment at the end.
     if (!lastSegment->GetFlag(HeapSegmentFlag::IsFree))
     {
+        // Zero out our newly allocated memory.
+        memset(heapEnd, 0, sizeof(HeapSegment));
         lastSegment->Next = (HeapSegment *)heapEnd;
         lastSegment->Next->Previous = lastSegment;
         lastSegment->Next->Length = size - sizeof(HeapSegment);
@@ -160,7 +181,7 @@ void InitEarlyHeap()
 
 void *HeapSegment::Address()
 {
-    return (void *)(((uint8_t *)this) + sizeof(HeapSegment));
+    return (void *)(this+1);
 }
 
 HeapSegment *HeapSegment::Split(size_t size)
