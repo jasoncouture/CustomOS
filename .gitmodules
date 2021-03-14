@@ -1,0 +1,3 @@
+[submodule "bootloader/uefi"]
+	path = bootloader/uefi
+	url = https://gitlab.com/bztsrc/posix-uefi.git
