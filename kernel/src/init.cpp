@@ -12,6 +12,7 @@
 #include "interrupts/interrupts.hpp"
 #include "interrupts/apic.hpp"
 #include "memory/heap.hpp"
+#include "interrupts/interruptdescriptortable.hpp"
 
 
 void kInitGlobalDesciptorTable()
@@ -84,32 +85,16 @@ void kInitConsoleFont(Font *font)
     KernelConsoleFont::InitializeInstance(font);
 }
 
-InterruptDesciptorTableLocation interruptDesciptorTableLocation;
-
-void SetInterruptHandler(void (*handler)(interrupt_frame*), uint64_t vector, uint8_t typeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE, uint16_t globalDescriptorTableSelector = 0x08)
-{
-    InterruptDescriptorTableEntry *entry = interruptDesciptorTableLocation.InterruptDesciptors + vector;
-    entry->SetOffset((uint64_t)(*handler));
-    entry->TypeAndAttribute = typeAndAttribute;
-    entry->Selector = globalDescriptorTableSelector; // Kernel code segment selector (See GDT);
-}
-
 void kInitInterrupts()
 {
-    interruptDesciptorTableLocation.Limit = 0x0FFF; // Maximum number of entries;
-    interruptDesciptorTableLocation.InterruptDesciptors = (InterruptDescriptorTableEntry *)PageAllocator::GetInstance()->AllocatePage();
+    auto descriptors = Kernel::Interrupts::InterruptDescriptors::GetInstance();
     
-    SetInterruptHandler(Interrupt_DoubleFaultHandler, 0x08);
-    SetInterruptHandler(Interrupt_GeneralProtectionFault, 0x0D);
-    SetInterruptHandler(Interrupt_PageFaultHandler, 0xE);
-    SetInterruptHandler(Interrupt_KeyboardInput, 0x21);
-    SetInterruptHandler(Interrupt_Timer, 0x20);
-
-
-    // Load IDT
-    asm("lidt %0"
-        :
-        : "m"(interruptDesciptorTableLocation));
+    descriptors->SetInterruptHandler(Interrupt_DoubleFaultHandler, 0x08);
+    descriptors->SetInterruptHandler(Interrupt_GeneralProtectionFault, 0x0D);
+    descriptors->SetInterruptHandler(Interrupt_PageFaultHandler, 0xE);
+    descriptors->SetInterruptHandler(Interrupt_KeyboardInput, 0x21);
+    descriptors->SetInterruptHandler(Interrupt_Timer, 0x20);
+    descriptors->Activate();
 }
 
 void kInitApic() 
