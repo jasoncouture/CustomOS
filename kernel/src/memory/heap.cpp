@@ -195,7 +195,7 @@ void *malloc(size_t size)
     if (size == 0)
         return NULL;
     // There's no way to handle sizes larger than the max pre-allocated size.
-    if (size > EARLY_HEAP_SIZE)
+    if (!canExpandHeap && size > EARLY_HEAP_SIZE)
         return NULL;
     // We haven't been called before, set the initial pointer.
     if (heapHead == NULL)
