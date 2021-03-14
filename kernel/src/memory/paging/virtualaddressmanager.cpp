@@ -29,23 +29,7 @@ VirtualAddressManager::VirtualAddressManager(PageTableEntry rootTable[512], bool
     this->FreeOnDestroy = freeOnDestory;
 }
 
-void kVirtualAddressDebug(const char *message, int column = 0)
-{
-    #ifdef _K_MEMORY_DEBUG
-    static uint64_t yLocation = 0;
-    if (yLocation == 0)
-        yLocation = KernelFrameBuffer::GetInstance()->GetHeight() - (KernelConsoleFont::GetInstance()->GetCharacterPixelHeight() * 2);
-
-    for (uint64_t x = column * KernelConsoleFont::GetInstance()->GetCharacterPixelWidth(); x < KernelFrameBuffer::GetInstance()->GetWidth(); x += KernelConsoleFont::GetInstance()->GetCharacterPixelWidth())
-    {
-        KernelConsoleFont::GetInstance()->DrawCharacterAt(' ', x, yLocation);
-    }
-    KernelConsoleFont::GetInstance()->DrawStringAt(message, 0, yLocation);
-    #endif
-}
-
-void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
-{
+PageTableEntry *VirtualAddressManager::GetPageTableEntry(void *virtualAddress, bool create) {
     auto pageAllocator = PageAllocator::GetInstance();
     auto pageSize = pageAllocator->PageSize();
 
@@ -57,7 +41,6 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
 
     uint16_t indexTable[] = {TopLevelDirectoryPointerIndex, PageDirectoryIndex, PageTableIndex, PageIndex};
     PageTableEntry *previousTable = this->RootTable;
-    PageTableEntry pageDirectoryEntry;
     for (uint16_t index = 0; index < 4; index++)
     {
         PageTableEntry pageDirectoryEntry = previousTable[indexTable[index]]; //this->RootTable[indexer.TopLevelDirectoryPointerIndex];
@@ -65,9 +48,8 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
         {
             if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
             {
-
+                if(!create) return NULL;
                 PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
-                kVirtualAddressDebug(kToHexString((uint64_t)pageDirectoryPointer));
                 memset(pageDirectoryPointer, 0, pageSize);
                 pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
                 pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
@@ -77,19 +59,38 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress)
         }
         else
         {
-
-            pageDirectoryEntry.SetAddress((uint64_t)physicalAddress);
-            if (physicalAddress == NULL)
-                pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, false); // Cause page faults on null pointer access. :)
-            else
-                pageDirectoryEntry.SetFlag(PageTableEntryFlag::Writable, true);
-            pageDirectoryEntry.SetFlag(PageTableEntryFlag::Present, true);
-            previousTable[indexTable[index]] = pageDirectoryEntry;
-            return;
+            if(!create && !pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
+                return NULL;
+            return &previousTable[indexTable[index]];
         }
 
         previousTable = (PageTableEntry *)pageDirectoryEntry.GetAddressPointer();
     }
+    return NULL;
+}
+
+void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress, bool writable)
+{
+    auto pageTableEntry = this->GetPageTableEntry(virtualAddress, true);
+    memset(pageTableEntry, 0, sizeof(PageTableEntry));
+    pageTableEntry->SetAddress((uint64_t)physicalAddress);
+    pageTableEntry->SetFlag(PageTableEntryFlag::Writable, writable);
+    pageTableEntry->SetFlag(PageTableEntryFlag::Present, true);
+}
+
+
+void *VirtualAddressManager::GetPhysicalAddress(void* virtualAddress) 
+{
+    auto pageTableEntry = this->GetPageTableEntry(virtualAddress, false);
+    if(pageTableEntry == NULL || !pageTableEntry->GetFlag(PageTableEntryFlag::Present)) return NULL;
+    return pageTableEntry->GetAddressPointer();
+}
+
+
+
+void VirtualAddressManager::Map(void* physicalAddress, bool writable)
+{
+    this->Map(physicalAddress, physicalAddress, writable);
 }
 
 void VirtualAddressManager::Activate()
