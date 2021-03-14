@@ -134,29 +134,18 @@ void kInitHeap()
 void kInit(KernelParameters *kernelParameters)
 {
     DisableInterrupts();
-    kInitFrameBuffer(kernelParameters->FrameBuffer);
-    kInitConsoleFont(kernelParameters->Font);
     kInitGlobalDesciptorTable();
-    auto kernelFrameBuffer = KernelFrameBuffer::GetInstance();
-    auto consoleFont = KernelConsoleFont::GetInstance();
-    
-    consoleFont->DrawStringAt("Framebuffer online, initializing memory", 0, consoleFont->GetCharacterPixelHeight() * 19);
-
-
-
     kInitMemory(kernelParameters->BootMemoryMap);
-    consoleFont->DrawStringAt("Memory map loaded, building page map", 0, consoleFont->GetCharacterPixelHeight() * 20);
     kInitPageManager(kernelParameters->FrameBuffer);
     kInitVirtualMemory(kernelParameters->FrameBuffer);
     kInitHeap();
-    // Restore the messages we just cleared.
-    consoleFont->DrawStringAt("Framebuffer online, initializing memory", 0, consoleFont->GetCharacterPixelHeight() * 19);
-    consoleFont->DrawStringAt("Memory map loaded, building page map", 0, consoleFont->GetCharacterPixelHeight() * 20);
-    consoleFont->DrawStringAt("Memory initialized, initializing Interrupts", 0, consoleFont->GetCharacterPixelHeight() * 21);
     kInitInterrupts();
     kInitApic();
     EnableInterrupts();
-    consoleFont->DrawStringAt("Interrupts Initialized.", 0, consoleFont->GetCharacterPixelHeight() * 22);
+    kInitFrameBuffer(kernelParameters->FrameBuffer);
+    kInitConsoleFont(kernelParameters->Font);
+    auto kernelFrameBuffer = KernelFrameBuffer::GetInstance();
+    auto consoleFont = KernelConsoleFont::GetInstance();
 }
 
 extern "C" void __entry(KernelParameters *kernelParameters)
