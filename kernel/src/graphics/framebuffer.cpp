@@ -1,6 +1,6 @@
 #include "framebuffer.hpp"
 #include <stddef.h>
-#include "../memory/pageallocator.hpp"
+#include "../memory/heap.hpp"
 #define PIXEL_FORMAT_RGB_RESERVED_8BIT_PER_COLOR 0
 #define PIXEL_FORMAT_BGR_RESERVED_8BIT_PER_COLOR 1
 #define PIXEL_BIT_MASK 2
@@ -54,22 +54,17 @@ void InitializeKernelFrameBuffer(FrameBuffer *frameBuffer, KernelFrameBufferInfo
     }
 }
 
-KernelFrameBuffer KernelFrameBuffer::GlobalSurface;
+KernelFrameBuffer *KernelFrameBuffer::GlobalSurface;
 
 KernelFrameBuffer *KernelFrameBuffer::InitializeInstance(FrameBuffer *frameBuffer)
 {
-    // Lock the frame buffer pages.
-    GlobalSurface = KernelFrameBuffer(frameBuffer);
+    GlobalSurface = new KernelFrameBuffer(frameBuffer);
     return GetInstance();
 }
 
 KernelFrameBuffer *KernelFrameBuffer::GetInstance()
 {
-    return &KernelFrameBuffer::GlobalSurface;
-}
-
-KernelFrameBuffer::KernelFrameBuffer()
-{
+    return KernelFrameBuffer::GlobalSurface;
 }
 
 void KernelFrameBuffer::DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBufferInfo *kernelFrameBuffer)
@@ -81,14 +76,15 @@ void KernelFrameBuffer::DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuff
 
 KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
 {
-    InitializeKernelFrameBuffer(frameBuffer, &this->kFrameBufferInfo);
+    this->kFrameBufferInfo = (KernelFrameBufferInfo*)malloc(sizeof(KernelFrameBufferInfo));
+    InitializeKernelFrameBuffer(frameBuffer, this->kFrameBufferInfo);
 }
 
 void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, const unsigned int color)
 {
 
-    FrameBuffer *frameBuffer = this->kFrameBufferInfo.FrameBuffer;
-    if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || this->kFrameBufferInfo.BytesPerPixel == 0)
+    FrameBuffer *frameBuffer = this->kFrameBufferInfo->FrameBuffer;
+    if (frameBuffer == NULL || frameBuffer->BaseAddress == NULL || this->kFrameBufferInfo->BytesPerPixel == 0)
         return;
     // y * width + x = offset
     // In this case, * bytes per pixel
@@ -96,20 +92,20 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     // Dereferenced, and assigned the value provided
     unsigned int localColor = color;
     uint8_t *colorData = (uint8_t *)&localColor;
-    uint64_t frameBufferOffset = (x * this->kFrameBufferInfo.BytesPerPixel) + (y * this->kFrameBufferInfo.BytesPerPixel * frameBuffer->PixelsPerScanLine);
+    uint64_t frameBufferOffset = (x * this->kFrameBufferInfo->BytesPerPixel) + (y * this->kFrameBufferInfo->BytesPerPixel * frameBuffer->PixelsPerScanLine);
     // If we'd go out of the framebuffer bounds, don't.
-    if (frameBufferOffset + this->kFrameBufferInfo.BytesPerPixel > frameBuffer->Size)
+    if (frameBufferOffset + this->kFrameBufferInfo->BytesPerPixel > frameBuffer->Size)
         return;
     uint8_t *buffer = (uint8_t *)frameBuffer->BaseAddress;
 
-    DirectWritePixel(buffer + frameBufferOffset, colorData, &this->kFrameBufferInfo);
+    DirectWritePixel(buffer + frameBufferOffset, colorData, this->kFrameBufferInfo);
 }
 
 void KernelFrameBuffer::Clear(const unsigned int color)
 {
-    for (unsigned int y = 0; y < this->kFrameBufferInfo.FrameBuffer->Height; y++)
+    for (unsigned int y = 0; y < this->kFrameBufferInfo->FrameBuffer->Height; y++)
     {
-        for (unsigned int x = 0; x < this->kFrameBufferInfo.FrameBuffer->Width; x++)
+        for (unsigned int x = 0; x < this->kFrameBufferInfo->FrameBuffer->Width; x++)
         {
             this->SetPixel(x, y, color);
         }
@@ -118,10 +114,10 @@ void KernelFrameBuffer::Clear(const unsigned int color)
 
 unsigned int KernelFrameBuffer::GetWidth()
 {
-    return this->kFrameBufferInfo.FrameBuffer->Width;
+    return this->kFrameBufferInfo->FrameBuffer->Width;
 }
 
 unsigned int KernelFrameBuffer::GetHeight()
 {
-    return this->kFrameBufferInfo.FrameBuffer->Height;
+    return this->kFrameBufferInfo->FrameBuffer->Height;
 }

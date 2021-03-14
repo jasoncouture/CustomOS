@@ -21,9 +21,8 @@ struct KernelFrameBufferInfo
 class KernelFrameBuffer 
 {
     private:
-        KernelFrameBuffer();
-        KernelFrameBufferInfo kFrameBufferInfo;
-        static KernelFrameBuffer GlobalSurface;
+        KernelFrameBufferInfo* kFrameBufferInfo;
+        static KernelFrameBuffer* GlobalSurface;
 
         void DirectWritePixel(uint8_t *buffer, uint8_t *colorDataBuffer, KernelFrameBufferInfo *kernelFrameBuffer);
 
