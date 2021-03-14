@@ -64,10 +64,10 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer)
     auto virtualAddressManager = VirtualAddressManager::GetKernelVirtualAddressManager();   
     // Frame buffer might lie outside of memory space, so make sure it's mapped into virtual memory.
     for (page = 0; page < frameBufferPageCount; page++)
-        virtualAddressManager->Map(PageToAddress(page + frameBufferStart, pageSize), PageToAddress(page + frameBufferStart, pageSize));
+        virtualAddressManager->Map(PageToAddress(page + frameBufferStart, pageSize));
     // Identity map all memory.
     for (page = 0; page < memoryPageSize; page++)
-        virtualAddressManager->Map(PageToAddress(page, pageSize), PageToAddress(page, pageSize));
+        virtualAddressManager->Map(PageToAddress(page, pageSize), page != 0);
 
     // And activate our virtual memory map.
     virtualAddressManager->Activate();
