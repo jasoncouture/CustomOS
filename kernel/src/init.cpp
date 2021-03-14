@@ -34,11 +34,6 @@ void *PageToAddress(uint64_t page, uint64_t pageSize)
 
 void kInitPageManager(FrameBuffer *frameBuffer) 
 {
-
-}
-
-void kInitVirtualMemory(FrameBuffer *frameBuffer)
-{
     auto memory = Memory::GetInstance();
     auto pageAllocator = PageAllocator::Initialize(memory);
     auto memoryMap = memory->GetBootMemoryMap();
@@ -47,7 +42,11 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer)
     pageAllocator->FreePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
     pageAllocator->ReservePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
     pageAllocator->ReservePages((void*)0, 4096); // Reserve the first 1MB of ram, it seems EFI doesn't report this in the memory map, but when we write to
-    // address 0xb0000-
+}
+
+void kInitVirtualMemory(FrameBuffer *frameBuffer)
+{
+    auto memory = Memory::GetInstance();
     // Setup the virtual memory manager.
     
     uint64_t pageSize = memory->PageSize();
