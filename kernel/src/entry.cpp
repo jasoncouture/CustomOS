@@ -9,6 +9,9 @@
 #include "memory/paging/virtualaddressmanager.hpp"
 #include "memory/gdt/gdt.hpp"
 #include "memory/heap.hpp"
+#include "event/eventloop.hpp"
+#include "event/eventcore.hpp"
+#include "timer/timer.hpp"
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -27,6 +30,17 @@ void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber
     font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
 }
 
+void OnEvent(Event *event)
+{
+    WriteDebugData("Event:", event->EventId(), 2);
+    WriteDebugData("Event Data:", event->EventData(), 3);
+    auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    WriteDebugData("Timestamp:", (uint64_t)(Kernel::Timer::GetInstance()->ElapsedTime() * 1000), 4);
+    WriteDebugData("Pending events:", eventLoop->Pending(), 5);
+    
+    DispatchKernelEvent(event);
+}
+
 void kMain(KernelParameters *kernelParameters)
 {
     auto pageAllocator = PageAllocator::GetInstance();
@@ -40,22 +54,10 @@ void kMain(KernelParameters *kernelParameters)
     auto bitmap = pageAllocator->GetBitmap();
     WriteDebugData("Bitmap located at:", (uint64_t)bitmap->GetBuffer(), 6, true);
     WriteDebugData("Bitmap size:", (uint64_t)bitmap->Size(), 7);
-    for (auto x = 0; x < 100000000; x++)
-    {
-    }
-    while (true)
-    {
-        auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
-        WriteDebugData("Total system memory:", memory->Size(), 2);
-        WriteDebugData("Bytes free:", freeMemoryInfo.BytesFree, 3);
-        WriteDebugData("Bytes used:", freeMemoryInfo.BytesUsed, 4);
-        WriteDebugData("Bytes reserved:", freeMemoryInfo.BytesReserved, 5);
-        auto aPointer = malloc(16);
-
-        freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
-        WriteDebugData("Total system memory:", memory->Size(), 2);
-        WriteDebugData("Bytes free:", freeMemoryInfo.BytesFree, 3);
-        WriteDebugData("Bytes used:", freeMemoryInfo.BytesUsed, 4);
-        WriteDebugData("Bytes reserved:", freeMemoryInfo.BytesReserved, 5);
-    }
+    auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    eventLoop->Publish(new Event(EventType::TimerTick, 0));
+    eventLoop->Publish(new Event(EventType::TimerTick, 1));
+    eventLoop->Publish(new Event(EventType::TimerTick, 2));
+    eventLoop->Publish(new Event(EventType::TimerTick, 3));
+    eventLoop->Run(OnEvent);
 }

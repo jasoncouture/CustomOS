@@ -6,6 +6,8 @@
 #include "../graphics/framebuffer.hpp"
 #include "apic.hpp"
 #include "../panic.hpp"
+#include "../event/eventloop.hpp"
+#include "../timer/timer.hpp"
 
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
@@ -27,10 +29,14 @@ __attribute__((interrupt)) void Interrupt_GeneralProtectionFault(struct interrup
 
 __attribute__((interrupt)) void Interrupt_KeyboardInput(struct interrupt_frame *frame)
 {
-    KernelConsoleFont::GetInstance()->DrawStringAt("Key Pressed", 800, 500);
     uint8_t scanCode = KeyboardPort->Read();
-    KernelConsoleFont::GetInstance()->DrawStringAt("  ", 800, 516);
-    KernelConsoleFont::GetInstance()->DrawStringAt(kToHexString(scanCode), 800, 516);
+    EndPicInterruptPrimary();
+    Kernel::Events::EventLoop::GetInstance()->Publish(new Event(EventType::KeyboardScanCode, scanCode));
+}
+
+__attribute__((interrupt)) void Interrupt_Timer(struct interrupt_frame *frame) 
+{
+    Kernel::Timer::GetInstance()->Tick();
     EndPicInterruptPrimary();
 }
 

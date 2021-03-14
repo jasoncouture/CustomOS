@@ -85,30 +85,25 @@ void kInitConsoleFont(Font *font)
 }
 
 InterruptDesciptorTableLocation interruptDesciptorTableLocation;
+
+void SetInterruptHandler(void (*handler)(interrupt_frame*), uint64_t vector, uint8_t typeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE, uint16_t globalDescriptorTableSelector = 0x08)
+{
+    InterruptDescriptorTableEntry *entry = interruptDesciptorTableLocation.InterruptDesciptors + vector;
+    entry->SetOffset((uint64_t)(*handler));
+    entry->TypeAndAttribute = typeAndAttribute;
+    entry->Selector = globalDescriptorTableSelector; // Kernel code segment selector (See GDT);
+}
+
 void kInitInterrupts()
 {
     interruptDesciptorTableLocation.Limit = 0x0FFF; // Maximum number of entries;
     interruptDesciptorTableLocation.InterruptDesciptors = (InterruptDescriptorTableEntry *)PageAllocator::GetInstance()->AllocatePage();
-
-    InterruptDescriptorTableEntry *pageFaultEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0xE;
-    pageFaultEntry->SetOffset((uint64_t)Interrupt_PageFaultHandler);
-    pageFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
-    pageFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
-
-    InterruptDescriptorTableEntry *doubleFaultEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0x8;
-    doubleFaultEntry->SetOffset((uint64_t)Interrupt_DoubleFaultHandler);
-    doubleFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
-    doubleFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
-
-    InterruptDescriptorTableEntry *generalProtectionFaultEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0xD;
-    generalProtectionFaultEntry->SetOffset((uint64_t)Interrupt_GeneralProtectionFault);
-    generalProtectionFaultEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
-    generalProtectionFaultEntry->Selector = 0x08; // Kernel code segment selector (See GDT);
-
-    InterruptDescriptorTableEntry *keyboardEntry = interruptDesciptorTableLocation.InterruptDesciptors + 0x21;
-    keyboardEntry->SetOffset((uint64_t)Interrupt_KeyboardInput);
-    keyboardEntry->TypeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE;
-    keyboardEntry->Selector = 0x08;
+    
+    SetInterruptHandler(Interrupt_DoubleFaultHandler, 0x08);
+    SetInterruptHandler(Interrupt_GeneralProtectionFault, 0x0D);
+    SetInterruptHandler(Interrupt_PageFaultHandler, 0xE);
+    SetInterruptHandler(Interrupt_KeyboardInput, 0x21);
+    SetInterruptHandler(Interrupt_Timer, 0x20);
 
 
     // Load IDT
@@ -122,7 +117,7 @@ void kInitApic()
     InitPorts();
     InitApic();
     // Unmask PIC Interrupts.
-    PIC1DataPort->Write(0b11111101);
+    PIC1DataPort->Write(0b11111100);
     PIC2DataPort->Write(0b11111111);
 }
 
