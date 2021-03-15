@@ -21,6 +21,7 @@ namespace Kernel
         void SetFrequency(uint64_t frequency);
         void Tick();
 
+        uint64_t ElapsedTimeMilliseconds();
         double ElapsedTime();
     };
 }

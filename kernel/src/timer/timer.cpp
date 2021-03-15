@@ -41,7 +41,9 @@ void Timer::Tick()
 {
     this->elapsed += 1.0 / (double)GetFrequency();
 }
-
+uint64_t Timer::ElapsedTimeMilliseconds() {
+    return (uint64_t)(this->elapsed * 1000.0);
+}
 double Timer::ElapsedTime()
 {
     return this->elapsed;
