@@ -10,6 +10,7 @@ LD = ld
 
 CFLAGS = -ffreestanding -fshort-wchar -fno-rtti -fno-inline -fno-exceptions -fstack-protector-strong -fno-unwind-tables -g -I../common/include -Wno-address-of-packed-member -Wundef -Wcast-qual -Wwrite-strings -Wimplicit-fallthrough -Wno-nonnull-compare -Wno-deprecated-copy -Wno-expansion-to-defined
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib --no-dynamic-linker
+DEPFLAGS = -MM -MD -MP -MF
 ASMFLAGS = -f elf64
 
 
@@ -42,25 +43,31 @@ setup:
 
 build: $(OBJS)
 
+# pull in dependency info for *existing* .o files
+-include $(OBJS:.o=.o.d)
+
 $(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
-	@ echo === COMPILING $^
+	@ echo === COMPILING $<
 	@ mkdir -p $(@D)
-	@ $(CC) -mno-red-zone -mgeneral-regs-only $(CFLAGS) -c $^ -o $@
+	@ $(CC) -mno-red-zone -mgeneral-regs-only $(CFLAGS) -c $< -o $@
+	@ $(CC) -mno-red-zone -mgeneral-regs-only $(CFLAGS) $< -MT $@ $(DEPFLAGS) $@.d
 
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
-	@ echo === ASSEMBLING $^
+	@ echo === ASSEMBLING $<
 	@ mkdir -p $(@D)
-	@ $(ASMC) $(ASMFLAGS) $^ -o $@
+	@ $(ASMC) $(ASMFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	@ echo === COMPILING $^
+	@ echo === COMPILING $<
 	@ mkdir -p $(@D)
-	@ $(CC) $(CFLAGS) -c $^ -o $@
+	@ $(CC) $(CFLAGS) -c $< -o $@
+	@ $(CC) $(CFLAGS) $< -MT $@ $(DEPFLAGS) $@.d
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
-	@ echo === COMPILING $^
+	@ echo === COMPILING $<
 	@ mkdir -p $(@D)
-	@ $(CC) $(CFLAGS) -c $^ -o $@
+	@ $(CC) $(CFLAGS) -c $< -o $@
+	@ $(CC) $(CFLAGS) $< -MT $@ $(DEPFLAGS) $@.d
 
 $(KERNEL): $(OBJS)
 	@ echo === LINKING $(OBJS)
