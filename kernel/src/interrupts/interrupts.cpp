@@ -37,6 +37,7 @@ __attribute__((interrupt)) void Interrupt_KeyboardInput(struct interrupt_frame *
 __attribute__((interrupt)) void Interrupt_Timer(struct interrupt_frame *frame) 
 {
     Kernel::Timer::GetInstance()->Tick();
+    Kernel::Events::EventLoop::GetInstance()->Publish(new Event(EventType::TimerTick));
     EndPicInterruptPrimary();
 }
 
