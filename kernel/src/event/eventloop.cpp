@@ -18,15 +18,16 @@ void EventLoop::Run(void (*onEvent)(Event *))
 {
     while (true)
     {
+        asm("cli");
         Event *next;
         if (!this->eventQueue->TryDequeue(&next))
         {
+            asm("sti");
             asm("hlt"); // Wait for an interrupt to wake us up.
             continue;
         }
-        asm("cli");
-        onEvent(next);
         asm("sti");
+        onEvent(next);
         delete next;
     }
 }
