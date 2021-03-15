@@ -46,3 +46,4 @@ OVMFbin/
 .vscode/
 kernel/bin/
 kernel/obj/
+bin/
