@@ -2,8 +2,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <framebuffer.h>
-#include "../memory/pageallocator.hpp"
-#include "../locks/lock.hpp"
+#include <memory/pageallocator.hpp>
+#include <locks/lock.hpp>
 
 struct KernelFrameBufferInfo
 {
