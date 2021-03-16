@@ -124,8 +124,6 @@ void kInit(KernelParameters *kernelParameters)
     EnableInterrupts();
     kInitFrameBuffer(kernelParameters->FrameBuffer);
     kInitConsoleFont(kernelParameters->Font);
-    auto kernelFrameBuffer = KernelFrameBuffer::GetInstance();
-    auto consoleFont = KernelConsoleFont::GetInstance();
 }
 
 extern "C" void __entry(KernelParameters *kernelParameters)
