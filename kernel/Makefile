@@ -14,7 +14,7 @@ CFLAGS += -Wundef -Wcast-qual -Wwrite-strings -Wimplicit-fallthrough -Wno-nonnul
 CFLAGS += -Wno-deprecated-copy -Wno-expansion-to-defined -I../common/include -Iinclude
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib --no-dynamic-linker
 DEPFLAGS = -MM -MD -MP -MF
-ASMFLAGS = -f elf64
+ASMFLAGS = -w-label-redef-late -f elf64
 
 
 SRCDIR := src

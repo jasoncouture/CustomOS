@@ -12,29 +12,29 @@
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
 
-__attribute__((interrupt)) void Interrupt_PageFaultHandler(struct interrupt_frame *frame)
+extern "C" void Interrupt_PageFaultHandler(struct InterruptStack *frame, size_t isr)
 {
     kPanic("An unrecoverable page fault has occured.");
 }
 
-__attribute__((interrupt)) void Interrupt_DoubleFaultHandler(struct interrupt_frame *frame) 
+extern "C" void Interrupt_DoubleFaultHandler(struct InterruptStack *frame, size_t isr) 
 {
     kPanic("A double fault has occurred!");
 }
 
-__attribute__((interrupt)) void Interrupt_GeneralProtectionFault(struct interrupt_frame *frame)
+extern "C" void Interrupt_GeneralProtectionFault(struct InterruptStack *frame, size_t isr)
 {
     kPanic("A general protection fault has occurred!");
 }
 
-__attribute__((interrupt)) void Interrupt_KeyboardInput(struct interrupt_frame *frame)
+extern "C" void Interrupt_KeyboardInput(struct InterruptStack *frame, size_t isr)
 {
     uint8_t scanCode = KeyboardPort->Read();
     EndPicInterruptPrimary();
     Kernel::Events::EventLoop::GetInstance()->Publish(new Event(EventType::KeyboardScanCode, scanCode));
 }
 
-__attribute__((interrupt)) void Interrupt_Timer(struct interrupt_frame *frame) 
+extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr) 
 {
     Kernel::Timer::GetInstance()->Tick();
     Kernel::Events::EventLoop::GetInstance()->Publish(new Event(EventType::TimerTick, Kernel::Timer::GetInstance()->ElapsedTimeMilliseconds()));

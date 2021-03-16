@@ -12,7 +12,7 @@ namespace Kernel::Interrupts
             static InterruptDescriptors* Instance;
         public:
             static InterruptDescriptors* GetInstance();
-            void SetInterruptHandler(void (*handler)(interrupt_frame*), uint64_t vector, uint8_t typeAndAttribute = IDT_TYPEATTRIBUTE_INTERRUPTGATE, uint16_t globalDescriptorTableSelector = 0x08);
+            void SetInterruptHandler(void (*handler)(InterruptStack*, size_t), uint64_t vector, uint8_t typeAndAttribute = IDT_ATTRIBUTE_PRESENT | IDT_ATTRIBUTE_PRIVILIGED | IDT_TYPE_GATE_INTERRUPT, uint16_t globalDescriptorTableSelector = 0x08);
             void Activate();
     };
 }
