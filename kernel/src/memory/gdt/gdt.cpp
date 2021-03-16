@@ -1,4 +1,4 @@
-#include "gdt.hpp"
+#include <memory/gdt/gdt.hpp>
 
 __attribute__((aligned(0x1000)))
 GlobalDesciptorTable DefaultGlobalDesciptorTable = {

@@ -1,3 +1,3 @@
 #pragma once
-#include "event.hpp"
+#include <event/event.hpp>
 void DispatchKernelEvent(Event* event);

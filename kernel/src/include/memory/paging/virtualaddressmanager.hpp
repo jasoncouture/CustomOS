@@ -1,5 +1,5 @@
 #pragma once
-#include "pagetableentry.hpp"
+#include <memory/paging/pagetableentry.hpp>
 
 class VirtualAddressManager 
 {

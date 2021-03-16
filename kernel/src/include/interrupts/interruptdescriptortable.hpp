@@ -1,6 +1,6 @@
 #pragma once
-#include "idt.hpp"
-#include "interruptframe.hpp"
+#include <interrupts/idt.hpp>
+#include <interrupts/interruptframe.hpp>
 
 namespace Kernel::Interrupts 
 {

@@ -1,17 +1,17 @@
 #include <stddef.h>
 #include <kernelparameters.h>
-#include "init.hpp"
-#include "graphics/framebuffer.hpp"
-#include "console/font.hpp"
-#include "memory/memory.hpp"
-#include "memory/pageallocator.hpp"
-#include "console/cstr.hpp"
-#include "memory/paging/virtualaddressmanager.hpp"
-#include "memory/gdt/gdt.hpp"
-#include "memory/heap.hpp"
-#include "event/eventloop.hpp"
-#include "event/eventcore.hpp"
-#include "timer/timer.hpp"
+#include <init.hpp>
+#include <graphics/framebuffer.hpp>
+#include <console/font.hpp>
+#include <memory/memory.hpp>
+#include <memory/pageallocator.hpp>
+#include <console/cstr.hpp>
+#include <memory/paging/virtualaddressmanager.hpp>
+#include <memory/gdt/gdt.hpp>
+#include <memory/heap.hpp>
+#include <event/eventloop.hpp>
+#include <event/eventcore.hpp>
+#include <timer/timer.hpp>
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00

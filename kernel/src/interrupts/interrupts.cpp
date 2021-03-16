@@ -1,13 +1,13 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "interrupts.hpp"
-#include "../console/font.hpp"
-#include "../console/cstr.hpp"
-#include "../graphics/framebuffer.hpp"
-#include "apic.hpp"
-#include "../panic.hpp"
-#include "../event/eventloop.hpp"
-#include "../timer/timer.hpp"
+#include <interrupts/interrupts.hpp>
+#include <console/font.hpp>
+#include <console/cstr.hpp>
+#include <graphics/framebuffer.hpp>
+#include <interrupts/apic.hpp>
+#include <panic.hpp>
+#include <event/eventloop.hpp>
+#include <timer/timer.hpp>
 
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF

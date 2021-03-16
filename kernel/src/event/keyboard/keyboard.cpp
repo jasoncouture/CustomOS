@@ -1,6 +1,6 @@
-#include "keyboard.hpp"
-#include "../eventloop.hpp"
-#include "../../collections/ringbuffer.hpp"
+#include <event/keyboard/keyboard.hpp>
+#include <event/eventloop.hpp>
+#include <collections/ringbuffer.hpp>
 #include <stddef.h>
 #include <stdint.h>
 

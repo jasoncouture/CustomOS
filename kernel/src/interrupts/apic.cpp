@@ -1,4 +1,4 @@
-#include "apic.hpp"
+#include <interrupts/apic.hpp>
 
 InputOutputPort* PIC1CommandPort = NULL;
 InputOutputPort* PIC1DataPort    = NULL;

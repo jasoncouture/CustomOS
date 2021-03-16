@@ -1,4 +1,4 @@
-#include "cstr.hpp"
+#include <console/cstr.hpp>
 
 char stringConversionBuffer[128];
 

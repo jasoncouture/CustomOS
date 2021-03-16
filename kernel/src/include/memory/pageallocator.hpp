@@ -1,8 +1,8 @@
 #pragma once
 #include <kernelparameters.h>
 #include <stdint.h>
-#include "../bitmap/bitmap.hpp"
-#include "memory.hpp"
+#include <bitmap/bitmap.hpp>
+#include <memory/memory.hpp>
 
 struct FreeMemoryInformation 
 {

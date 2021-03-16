@@ -1,4 +1,4 @@
-#include "idt.hpp"
+#include <interrupts/interruptdescriptortable.hpp>
 
 void InterruptDescriptorTableEntry::SetOffset(uint64_t offset)
 {

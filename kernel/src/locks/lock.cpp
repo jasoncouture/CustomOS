@@ -1,4 +1,4 @@
-#include "lock.hpp"
+#include <locks/lock.hpp>
 
 #define LOCK_STATE_UNLOCKED 0
 #define LOCK_STATE_LOCKED 1

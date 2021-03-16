@@ -1,6 +1,6 @@
-#include "interruptdescriptortable.hpp"
-#include "../memory/pageallocator.hpp"
-#include "../memory/heap.hpp"
+#include <interrupts/interruptdescriptortable.hpp>
+#include <memory/pageallocator.hpp>
+#include <memory/heap.hpp>
 
 using namespace Kernel::Interrupts;
 

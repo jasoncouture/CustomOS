@@ -1,7 +1,7 @@
-#include "panic.hpp"
-#include "graphics/framebuffer.hpp"
-#include "console/font.hpp"
-#include "console/cstr.hpp"
+#include <panic.hpp>
+#include <graphics/framebuffer.hpp>
+#include <console/font.hpp>
+#include <console/cstr.hpp>
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
 

@@ -1,6 +1,6 @@
-#include "framebuffer.hpp"
+#include <graphics/framebuffer.hpp>
 #include <stddef.h>
-#include "../memory/heap.hpp"
+#include <memory/heap.hpp>
 #define PIXEL_FORMAT_RGB_RESERVED_8BIT_PER_COLOR 0
 #define PIXEL_FORMAT_BGR_RESERVED_8BIT_PER_COLOR 1
 #define PIXEL_BIT_MASK 2

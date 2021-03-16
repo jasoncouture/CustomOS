@@ -1,8 +1,8 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
-#include "pageallocator.hpp"
-#include "paging/virtualaddressmanager.hpp"
+#include <memory/pageallocator.hpp>
+#include <memory/paging/virtualaddressmanager.hpp>
 
 enum HeapSegmentFlag
 {

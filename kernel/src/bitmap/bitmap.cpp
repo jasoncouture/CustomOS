@@ -1,4 +1,4 @@
-#include "bitmap.hpp"
+#include <bitmap/bitmap.hpp>
 
 Bitmap::Bitmap(void *buffer, size_t size)
 {

@@ -1,5 +1,5 @@
-#include "font.hpp"
-#include "../graphics/framebuffer.hpp"
+#include <console/font.hpp>
+#include <graphics/framebuffer.hpp>
 
 KernelConsoleFont* KernelConsoleFont::Instance = NULL;
 

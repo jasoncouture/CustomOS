@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include "../ioport/port.hpp"
+#include <ioport/port.hpp>
+
 namespace Kernel
 {
     class Timer

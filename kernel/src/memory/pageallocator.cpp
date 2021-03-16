@@ -1,9 +1,9 @@
-#include "pageallocator.hpp"
+#include <memory/pageallocator.hpp>
 #include <kernelparameters.h>
-#include "heap.hpp"
-#include "../console/font.hpp"
-#include "../console/cstr.hpp"
-#include "../graphics/framebuffer.hpp"
+#include <memory/heap.hpp>
+#include <console/font.hpp>
+#include <console/cstr.hpp>
+#include <graphics/framebuffer.hpp>
 
 #define MDT_EFI_CONVENTIONAL_MEMORY_TYPE 7
 extern uint64_t _kernelStart;

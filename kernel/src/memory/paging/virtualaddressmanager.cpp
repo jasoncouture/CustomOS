@@ -1,12 +1,12 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "virtualaddressmanager.hpp"
-#include "pagetableindexer.hpp"
-#include "../memory.hpp"
-#include "../pageallocator.hpp"
-#include "../../console/font.hpp"
-#include "../../console/cstr.hpp"
-#include "../../graphics/framebuffer.hpp"
+#include <memory/paging/virtualaddressmanager.hpp>
+#include <memory/paging/pagetableindexer.hpp>
+#include <memory/memory.hpp>
+#include <memory/pageallocator.hpp>
+#include <console/font.hpp>
+#include <console/cstr.hpp>
+#include <graphics/framebuffer.hpp>
 
 // Class members
 

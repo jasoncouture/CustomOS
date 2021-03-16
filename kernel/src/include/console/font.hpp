@@ -1,5 +1,5 @@
 #pragma once
-#include "../graphics/framebuffer.hpp"
+#include <graphics/framebuffer.hpp>
 #include <font.h>
 
 class KernelConsoleFont {

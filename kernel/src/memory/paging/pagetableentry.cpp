@@ -1,4 +1,4 @@
-#include "pagetableentry.hpp"
+#include <memory/paging/pagetableentry.hpp>
 
 #define ADDRESS_MASK 0x000ffffffff000
 #define FLAGS_MASK 0xfff00000000fff

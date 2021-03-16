@@ -1,9 +1,9 @@
 #include <stddef.h>
 #include <stdint.h>
-#include "memory.hpp"
-#include "heap.hpp"
-#include "paging/virtualaddressmanager.hpp"
-#include "pageallocator.hpp"
+#include <memory/memory.hpp>
+#include <memory/heap.hpp>
+#include <memory/paging/virtualaddressmanager.hpp>
+#include <memory/pageallocator.hpp>
 
 #define EARLY_HEAP_SIZE 0x10000
 #define MINIMUM_ALLOCATION_UNIT 24

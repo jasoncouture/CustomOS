@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include "ringbuffer.hpp"
-#include "../locks/lock.hpp"
+#include <collections/ringbuffer.hpp>
+#include <locks/lock.hpp>
 
 namespace Kernel::Collections
 {

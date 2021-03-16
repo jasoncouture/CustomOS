@@ -1,18 +1,18 @@
 #include <stddef.h>
 #include <kernelparameters.h>
-#include "init.hpp"
-#include "graphics/framebuffer.hpp"
-#include "console/font.hpp"
-#include "memory/memory.hpp"
-#include "memory/pageallocator.hpp"
-#include "console/cstr.hpp"
-#include "memory/paging/virtualaddressmanager.hpp"
-#include "memory/gdt/gdt.hpp"
-#include "interrupts/idt.hpp"
-#include "interrupts/interrupts.hpp"
-#include "interrupts/apic.hpp"
-#include "memory/heap.hpp"
-#include "interrupts/interruptdescriptortable.hpp"
+#include <init.hpp>
+#include <graphics/framebuffer.hpp>
+#include <console/font.hpp>
+#include <memory/memory.hpp>
+#include <memory/pageallocator.hpp>
+#include <console/cstr.hpp>
+#include <memory/paging/virtualaddressmanager.hpp>
+#include <memory/gdt/gdt.hpp>
+#include <interrupts/idt.hpp>
+#include <interrupts/interrupts.hpp>
+#include <interrupts/apic.hpp>
+#include <memory/heap.hpp>
+#include <interrupts/interruptdescriptortable.hpp>
 
 
 void kInitGlobalDesciptorTable()

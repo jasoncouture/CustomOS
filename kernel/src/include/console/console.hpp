@@ -1,6 +1,5 @@
 #pragma once
-#include "font.hpp"
-#include "../math/point.hpp"
+#include <console/font.hpp>
 // class KernelConsole {
 //     private:
 

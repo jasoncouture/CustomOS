@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include "../memory/heap.hpp"
+#include <memory/heap.hpp>
+
 namespace Kernel::Collections
 {
 

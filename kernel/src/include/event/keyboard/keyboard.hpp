@@ -1,5 +1,5 @@
 #pragma once
-#include "../event.hpp"
+#include <event/event.hpp>
 
 enum KeyboardKey {
     Escape = 0x01,

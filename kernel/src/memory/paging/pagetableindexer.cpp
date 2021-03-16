@@ -1,4 +1,4 @@
-#include "pagetableindexer.hpp"
+#include <memory/paging/pagetableindexer.hpp>
 
 PageTableIndexer::PageTableIndexer(uint64_t virtualAddress) {
     uint64_t virtualPage = virtualAddress >> 12;

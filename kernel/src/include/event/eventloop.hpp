@@ -1,5 +1,6 @@
-#include "event.hpp"
-#include "../collections/queue.hpp"
+#pragma once
+#include <event/event.hpp>
+#include <collections/queue.hpp>
 
 namespace Kernel::Events 
 {

@@ -1,5 +1,5 @@
-#include "eventcore.hpp"
-#include "keyboard/keyboard.hpp"
+#include <event/eventcore.hpp>
+#include <event/keyboard/keyboard.hpp>
 
 void DispatchKernelEvent(Event *event)
 {

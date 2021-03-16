@@ -1,4 +1,4 @@
-#include "event.hpp"
+#include <event/event.hpp>
 
 Event::Event(EventType eventType, uint64_t eventData) 
 {
