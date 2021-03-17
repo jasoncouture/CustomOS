@@ -74,7 +74,7 @@ EXTERN InterruptHandlers
 		%%.finish:
 			POP_REG
 			%if	%2 == 0
-				pop rax
+				add		rsp, 8
 			%endif
 			iretq
 %endmacro
