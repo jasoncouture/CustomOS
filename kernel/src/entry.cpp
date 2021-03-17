@@ -30,21 +30,21 @@ void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber
     // const char *numericString = hex ? kToHexString(value) : kToString(value);
     // font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
 }
-const double interval = 1.0/60.0;
+const double interval = 1.0 / 60.0;
 void OnEvent(Event *event)
 {
     static uint64_t eventCount = 0;
     static uint64_t eventCountAtLastScreenUpdate;
     static uint64_t maxPending = 0;
     static double lastScreenUpdate = 0.0;
-    static Kernel::Events::EventLoop* eventLoop = NULL;
-    if(eventLoop == NULL)
+    static Kernel::Events::EventLoop *eventLoop = NULL;
+    if (eventLoop == NULL)
         eventLoop = Kernel::Events::EventLoop::GetInstance();
     auto pendingEvents = eventLoop->Pending();
-    if(pendingEvents > maxPending)
+    if (pendingEvents > maxPending)
         maxPending = pendingEvents;
     eventCount++;
-    
+
     DispatchKernelEvent(event);
     if (event->EventId() == EventType::TimerTick)
     {
