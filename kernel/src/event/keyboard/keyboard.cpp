@@ -132,12 +132,13 @@ void KeyboardEvent(KeyboardKey key, KeyboardKeyFlags flags)
         {
             auto eventLoop = Kernel::Events::EventLoop::GetInstance();
             eventLoop->Publish(new Event(EventType::KeyboardCharacterInput, character));
-            if (GetCharacterBuffer()->TryWrite(character))
+            
+            if (!bufferFull && GetCharacterBuffer()->TryWrite(character))
             {
                 bufferFull = false;
                 eventLoop->Publish(new Event(EventType::KeyboardKeyAvailable));
-            } 
-            else if (!bufferFull) 
+            }
+            else if (!bufferFull)
             {
                 bufferFull = true;
                 eventLoop->Publish(new Event(EventType::KeyboardBufferFull));
@@ -160,4 +161,19 @@ void KeyboardScanCodeEvent(Event *event)
     }
 
     KeyboardEvent(key, flags);
+}
+
+bool CharacterAvailable()
+{
+    return keyboardCharacterBuffer->Count() > 0;
+}
+
+char ReadNextCharacter()
+{
+    char ret;
+    if (!keyboardCharacterBuffer->TryRead(&ret))
+    {
+        ret = '\0';
+    }
+    return ret;
 }
