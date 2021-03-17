@@ -32,15 +32,27 @@ extern "C" void Interrupt_GeneralProtectionFault(struct InterruptStack *frame, s
 
 extern "C" void Interrupt_KeyboardInput(struct InterruptStack *frame, size_t isr)
 {
+    static Kernel::Events::EventLoop* eventLoop = NULL;
+    if(eventLoop == NULL) {
+        eventLoop = Kernel::Events::EventLoop::GetInstance();
+    }
     uint8_t scanCode = KeyboardPort->Read();
     EndPicInterruptPrimary();
-    Kernel::Events::EventLoop::GetInstance()->Publish(new Event(EventType::KeyboardScanCode, scanCode));
+    eventLoop->Publish(new Event(EventType::KeyboardScanCode, scanCode));
 }
 
 extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr) 
 {
-    Kernel::Timer::GetInstance()->Tick();
-    Kernel::Events::EventLoop::GetInstance()->Publish(new Event(EventType::TimerTick, Kernel::Timer::GetInstance()->ElapsedTimeMilliseconds()));
+    static Kernel::Events::EventLoop* eventLoop = NULL;
+    static Kernel::Timer* timer = NULL;
+    if(timer == NULL) {
+        timer = Kernel::Timer::GetInstance();
+    }
+    timer->Tick();
+    if(eventLoop == NULL) {
+        eventLoop = Kernel::Events::EventLoop::GetInstance();
+    }
+    eventLoop->Publish(new Event(EventType::TimerTick, timer->ElapsedTimeMilliseconds()));
     EndPicInterruptPrimary();
 }
 
