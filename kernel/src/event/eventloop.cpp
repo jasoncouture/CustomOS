@@ -5,11 +5,8 @@ using namespace Kernel::Collections;
 
 EventLoop *EventLoop::GetInstance()
 {
-    asm volatile ("cli");
-    
     if (EventLoop::GlobalEventLoop == NULL)
         EventLoop::GlobalEventLoop = new EventLoop();
-    asm volatile ("sti");
     return EventLoop::GlobalEventLoop;
 }
 EventLoop::EventLoop()
