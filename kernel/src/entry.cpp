@@ -13,6 +13,7 @@
 #include <event/eventcore.hpp>
 #include <timer/timer.hpp>
 #include <console/printf.hpp>
+#include <event/keyboard/keyboard.hpp>
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -73,6 +74,27 @@ void kMain(KernelParameters *kernelParameters)
     auto bitmap = pageAllocator->GetBitmap();
     printf("Kernel booted. Starting event loop.\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    eventLoop->SetHandler(EventType::KeyboardKeyAvailable, [](Event *event) {
+        char c = ReadNextCharacter();
+        while (c != '\0')
+        {
+            if (c == '\n')
+            {
+                printf("\r\n");
+            }
+            else
+            {
+                printf("%c", c);
+            }
+            c = ReadNextCharacter();
+        }
+    });
+    eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
+        printf("WARN: Keyboard buffer is full\r\n");
+    });
+    eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
+        Kernel::Timer::GetInstance()->Tick();
+    });
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
     eventLoop->Publish(new Event(EventType::TimerTick, 1));
     eventLoop->Publish(new Event(EventType::TimerTick, 2));
