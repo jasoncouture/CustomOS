@@ -103,7 +103,7 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     // Dereferenced, and assigned the value provided
     uint64_t frameBufferOffset = (x * this->kFrameBufferInfo->BytesPerPixel) + (y * this->kFrameBufferInfo->BytesPerPixel * frameBuffer->PixelsPerScanLine);
     // If we'd go out of the framebuffer bounds, don't.
-    if (frameBufferOffset + this->kFrameBufferInfo->BytesPerPixel > frameBuffer->Size)
+    if (frameBufferOffset + this->kFrameBufferInfo->BytesPerPixel >= frameBuffer->Size)
         return;
     uint64_t *buffer = (uint64_t *)((uint8_t*)frameBuffer->BaseAddress + frameBufferOffset);
     uint64_t deviceColor =  DeviceColorFromKernelColor(color, this->kFrameBufferInfo);
