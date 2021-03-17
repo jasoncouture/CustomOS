@@ -74,26 +74,8 @@ void kMain(KernelParameters *kernelParameters)
     auto bitmap = pageAllocator->GetBitmap();
     printf("Kernel booted. Starting event loop.\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
-    eventLoop->SetHandler(EventType::KeyboardKeyAvailable, [](Event *event) {
-        char c = ReadNextCharacter();
-        while (c != '\0')
-        {
-            if (c == '\n')
-            {
-                printf("\r\n");
-            }
-            else
-            {
-                printf("%c", c);
-            }
-            c = ReadNextCharacter();
-        }
-    });
     eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
         printf("WARN: Keyboard buffer is full\r\n");
-    });
-    eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
-        Kernel::Timer::GetInstance()->Tick();
     });
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
     eventLoop->Publish(new Event(EventType::TimerTick, 1));
