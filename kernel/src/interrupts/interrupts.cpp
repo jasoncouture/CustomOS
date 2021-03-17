@@ -46,10 +46,10 @@ extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
 
 void DisableInterrupts()
 {
-    asm("cli");
+    asm volatile("cli");
 }
 
 void EnableInterrupts()
 {
-    asm("sti");
+    asm volatile("sti");
 }
