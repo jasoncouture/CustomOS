@@ -8,13 +8,16 @@
 #include <panic.hpp>
 #include <event/eventloop.hpp>
 #include <timer/timer.hpp>
+#include <console/printf.hpp>
 
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
 
 extern "C" void Interrupt_PageFaultHandler(struct InterruptStack *frame, size_t isr)
 {
-    kPanic("An unrecoverable page fault has occured.");
+    char buffer[1024];
+    sprintf(buffer, "PAGE FAULT @ IP: 0x%016X", frame->rip);
+    kPanic(buffer);
 }
 
 extern "C" void Interrupt_DoubleFaultHandler(struct InterruptStack *frame, size_t isr) 
