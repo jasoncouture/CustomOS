@@ -47,8 +47,7 @@ void KernelConsole::SetCursorPosition(uint64_t x, uint64_t y)
 
 void KernelConsole::PutCharacter(char character)
 {
-    uint64_t x = this->position.X * this->font->GetCharacterPixelWidth();
-    uint64_t y = this->position.Y * this->font->GetCharacterPixelHeight();
+
     if (character == '\0')
     {
         return;
@@ -64,7 +63,8 @@ void KernelConsole::PutCharacter(char character)
         this->FixPosition();
         return;
     }
-
+    uint64_t x = this->position.X * this->font->GetCharacterPixelWidth();
+    uint64_t y = this->position.Y * this->font->GetCharacterPixelHeight();
     this->font->DrawCharacterAt(character, x, y, this->foregroundColor, this->backgroundColor);
 
     this->position.X = this->position.X + 1;
