@@ -12,6 +12,7 @@
 #include <event/eventloop.hpp>
 #include <event/eventcore.hpp>
 #include <timer/timer.hpp>
+#include <console/printf.hpp>
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -21,13 +22,13 @@
 
 void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber, bool hex = false)
 {
-    auto font = KernelConsoleFont::GetInstance();
-    font->DrawStringAt("                                                                              ", 0, font->GetCharacterPixelHeight() * lineNumber);
-    font->DrawStringAt(description, 0, font->GetCharacterPixelHeight() * lineNumber);
-    // This is done after processing Description, because kToHexString and kToString share a single global buffer
-    // and calling it will nuke the value located in the pointer above if it's used as an input value.
-    const char *numericString = hex ? kToHexString(value) : kToString(value);
-    font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
+    // auto font = KernelConsoleFont::GetInstance();
+    // font->DrawStringAt("                                                                              ", 0, font->GetCharacterPixelHeight() * lineNumber);
+    // font->DrawStringAt(description, 0, font->GetCharacterPixelHeight() * lineNumber);
+    // // This is done after processing Description, because kToHexString and kToString share a single global buffer
+    // // and calling it will nuke the value located in the pointer above if it's used as an input value.
+    // const char *numericString = hex ? kToHexString(value) : kToString(value);
+    // font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
 }
 const double interval = 1.0/60.0;
 void OnEvent(Event *event)
@@ -69,15 +70,8 @@ void kMain(KernelParameters *kernelParameters)
 {
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
-    auto font = KernelConsoleFont::GetInstance();
-    auto frameBuffer = KernelFrameBuffer::GetInstance();
-    font->DrawStringAt("Booting kernel (Early init)", 0, font->GetCharacterPixelHeight() * 0);
-
-    font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight() * 1);
-
     auto bitmap = pageAllocator->GetBitmap();
-    WriteDebugData("Bitmap located at:", (uint64_t)bitmap->GetBuffer(), 20, true);
-    WriteDebugData("Bitmap size:", (uint64_t)bitmap->Size(), 21);
+    printf("Kernel booted. Starting event loop.\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
     eventLoop->Publish(new Event(EventType::TimerTick, 1));
