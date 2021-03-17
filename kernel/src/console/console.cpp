@@ -21,6 +21,7 @@ void KernelConsole::FixPosition()
 {
     if (this->position.X >= this->screenSize.X)
     {
+        this->position.X = 0;
         this->position.Y = this->position.Y + 1;
     }
     if (this->position.Y >= this->screenSize.Y)
