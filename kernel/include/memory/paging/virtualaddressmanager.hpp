@@ -11,6 +11,7 @@ class VirtualAddressManager
         void Map(void* physicalAddress, bool writable = true);
         void *GetPhysicalAddress(void* virtualAddress);
         void Activate();
+        void *GetPageTableAddress();
         static VirtualAddressManager* GetKernelVirtualAddressManager();
     private:
         PageTableEntry* RootTable;

@@ -29,7 +29,13 @@ VirtualAddressManager::VirtualAddressManager(PageTableEntry rootTable[512], bool
     this->FreeOnDestroy = freeOnDestory;
 }
 
-PageTableEntry *VirtualAddressManager::GetPageTableEntry(void *virtualAddress, bool create) {
+void *VirtualAddressManager::GetPageTableAddress()
+{
+    return (void *)this->RootTable;
+}
+
+PageTableEntry *VirtualAddressManager::GetPageTableEntry(void *virtualAddress, bool create)
+{
     auto pageAllocator = PageAllocator::GetInstance();
     auto pageSize = pageAllocator->PageSize();
 
@@ -48,7 +54,8 @@ PageTableEntry *VirtualAddressManager::GetPageTableEntry(void *virtualAddress, b
         {
             if (!pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
             {
-                if(!create) return NULL;
+                if (!create)
+                    return NULL;
                 PageTableEntry *pageDirectoryPointer = (PageTableEntry *)pageAllocator->AllocatePage();
                 memset(pageDirectoryPointer, 0, pageSize);
                 pageDirectoryEntry.SetAddress((uint64_t)pageDirectoryPointer);
@@ -59,7 +66,7 @@ PageTableEntry *VirtualAddressManager::GetPageTableEntry(void *virtualAddress, b
         }
         else
         {
-            if(!create && !pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
+            if (!create && !pageDirectoryEntry.GetFlag(PageTableEntryFlag::Present))
                 return NULL;
             return &previousTable[indexTable[index]];
         }
@@ -78,17 +85,15 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress, boo
     pageTableEntry->SetFlag(PageTableEntryFlag::Present, true);
 }
 
-
-void *VirtualAddressManager::GetPhysicalAddress(void* virtualAddress) 
+void *VirtualAddressManager::GetPhysicalAddress(void *virtualAddress)
 {
     auto pageTableEntry = this->GetPageTableEntry(virtualAddress, false);
-    if(pageTableEntry == NULL || !pageTableEntry->GetFlag(PageTableEntryFlag::Present)) return NULL;
+    if (pageTableEntry == NULL || !pageTableEntry->GetFlag(PageTableEntryFlag::Present))
+        return NULL;
     return pageTableEntry->GetAddressPointer();
 }
 
-
-
-void VirtualAddressManager::Map(void* physicalAddress, bool writable)
+void VirtualAddressManager::Map(void *physicalAddress, bool writable)
 {
     this->Map(physicalAddress, physicalAddress, writable);
 }
