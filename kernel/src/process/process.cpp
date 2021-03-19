@@ -25,6 +25,7 @@ void Process::Initialize(void *entrypoint, uint64_t stackSize)
     initialFrame.rdi = (uint64_t)entrypoint;
     initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + stackSize);
     initialFrame.rsp = initialFrame.rbp;
+    initialFrame.cr3 = (uint64_t)this->virtualAddressManager->GetPageTableAddress();
     this->interruptStack = initialFrame;
 }
 
