@@ -8,7 +8,8 @@ enum EventType {
     Keyboard = 3,
     KeyboardCharacterInput = 4,
     KeyboardKeyAvailable = 5,
-    KeyboardBufferFull = 6
+    KeyboardBufferFull = 6,
+    ContextSwitch = 7
 };
 
 class Event 

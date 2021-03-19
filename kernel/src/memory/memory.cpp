@@ -33,8 +33,10 @@ Memory *Memory::GetInstance()
 
 Memory *Memory::Initialize(BootMemoryMap *bootMemoryMap)
 {
-    if(Instance == NULL) 
+    static bool initialized = false;
+    if(!initialized) 
     {
+        initialized = true;
         Instance = new Memory(bootMemoryMap);
     }
     return Instance;

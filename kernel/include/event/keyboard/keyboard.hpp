@@ -106,3 +106,5 @@ struct KeyboardEventData
 };
 
 void KeyboardScanCodeEvent(Event* event);
+bool CharacterAvailable();
+char ReadNextCharacter();

@@ -74,7 +74,7 @@ EXTERN InterruptHandlers
 		%%.finish:
 			POP_REG
 			%if	%2 == 0
-				pop rax
+				add		rsp, 8
 			%endif
 			iretq
 %endmacro
@@ -108,3 +108,5 @@ ISR_DEFINE	35, 0	; COM2
 ISR_DEFINE	36, 0	; COM1
 ISR_DEFINE	37, 0	; LPT2
 ISR_DEFINE	39, 0	; LPT1
+
+ISR_DEFINE  128, 0   ; Syscall

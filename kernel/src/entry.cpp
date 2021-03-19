@@ -12,6 +12,9 @@
 #include <event/eventloop.hpp>
 #include <event/eventcore.hpp>
 #include <timer/timer.hpp>
+#include <console/printf.hpp>
+#include <event/keyboard/keyboard.hpp>
+#include <process/process.hpp>
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -21,29 +24,29 @@
 
 void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber, bool hex = false)
 {
-    auto font = KernelConsoleFont::GetInstance();
-    font->DrawStringAt("                                                                              ", 0, font->GetCharacterPixelHeight() * lineNumber);
-    font->DrawStringAt(description, 0, font->GetCharacterPixelHeight() * lineNumber);
-    // This is done after processing Description, because kToHexString and kToString share a single global buffer
-    // and calling it will nuke the value located in the pointer above if it's used as an input value.
-    const char *numericString = hex ? kToHexString(value) : kToString(value);
-    font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
+    // auto font = KernelConsoleFont::GetInstance();
+    // font->DrawStringAt("                                                                              ", 0, font->GetCharacterPixelHeight() * lineNumber);
+    // font->DrawStringAt(description, 0, font->GetCharacterPixelHeight() * lineNumber);
+    // // This is done after processing Description, because kToHexString and kToString share a single global buffer
+    // // and calling it will nuke the value located in the pointer above if it's used as an input value.
+    // const char *numericString = hex ? kToHexString(value) : kToString(value);
+    // font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
 }
-const double interval = 1.0/60.0;
+const double interval = 1.0 / 60.0;
 void OnEvent(Event *event)
 {
     static uint64_t eventCount = 0;
     static uint64_t eventCountAtLastScreenUpdate;
     static uint64_t maxPending = 0;
     static double lastScreenUpdate = 0.0;
-    static Kernel::Events::EventLoop* eventLoop = NULL;
-    if(eventLoop == NULL)
+    static Kernel::Events::EventLoop *eventLoop = NULL;
+    if (eventLoop == NULL)
         eventLoop = Kernel::Events::EventLoop::GetInstance();
     auto pendingEvents = eventLoop->Pending();
-    if(pendingEvents > maxPending)
+    if (pendingEvents > maxPending)
         maxPending = pendingEvents;
     eventCount++;
-    
+
     DispatchKernelEvent(event);
     if (event->EventId() == EventType::TimerTick)
     {
@@ -65,23 +68,50 @@ void OnEvent(Event *event)
     }
 }
 
+int KernelEventLoop()
+{
+    printf("Kernel event thread started\r\n");
+    auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    eventLoop->Run(OnEvent);
+    return 0;
+}
+
 void kMain(KernelParameters *kernelParameters)
 {
+    Processes[1] = new Process(1, VirtualAddressManager::GetKernelVirtualAddressManager());
+    {
+        auto idleProcessStack = Processes[0]->GetInterruptStack();
+        Processes[1]->SetProcessState(&idleProcessStack);
+        Processes[1]->Initialize((void *)KernelEventLoop);
+        Processes[1]->SaveFloatingPointState();
+        Processes[1]->RestoreFloatingPointState();
+    }
+
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
-    auto font = KernelConsoleFont::GetInstance();
-    auto frameBuffer = KernelFrameBuffer::GetInstance();
-    font->DrawStringAt("Booting kernel (Early init)", 0, font->GetCharacterPixelHeight() * 0);
-
-    font->DrawStringAt("Frame buffer initialized and console font loaded", 0, font->GetCharacterPixelHeight() * 1);
-
     auto bitmap = pageAllocator->GetBitmap();
-    WriteDebugData("Bitmap located at:", (uint64_t)bitmap->GetBuffer(), 20, true);
-    WriteDebugData("Bitmap size:", (uint64_t)bitmap->Size(), 21);
+    printf("Kernel booted. Starting event loop.\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
+        printf("WARN: Keyboard buffer is full\r\n");
+    });
+    eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
+        Processes[0]->Activate();
+        printf("T");
+    });
+
+    eventLoop->SetHandler(EventType::ContextSwitch, [](Event* event){
+        printf(".");
+    });
+    Processes[1]->Activate();
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
     eventLoop->Publish(new Event(EventType::TimerTick, 1));
     eventLoop->Publish(new Event(EventType::TimerTick, 2));
     eventLoop->Publish(new Event(EventType::TimerTick, 3));
-    eventLoop->Run(OnEvent);
+    uint64_t counter = 0;
+    while (true)
+    {
+        Processes[1]->Activate();
+        asm("hlt");
+    }
 }

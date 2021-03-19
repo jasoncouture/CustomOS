@@ -2,7 +2,7 @@
 #include <memory/pageallocator.hpp>
 #include <memory/heap.hpp>
 #include "interrupthandler.hpp"
-#define ISR_MAX 0x64
+#define ISR_MAX 0x81
 
 using namespace Kernel::Interrupts;
 
@@ -54,7 +54,7 @@ uint64_t GetInterruptEntryPoint(uint64_t vector)
     //ISR_CASE(38);
     ISR_CASE(39);
     //ISR_CASE(40);
-
+    ISR_CASE(128);
     return 0ull;
 }
 

@@ -13,7 +13,7 @@
 #include <interrupts/apic.hpp>
 #include <memory/heap.hpp>
 #include <interrupts/interruptdescriptortable.hpp>
-
+#include <process/process.hpp>
 
 void kInitGlobalDesciptorTable()
 {
@@ -111,6 +111,15 @@ void kInitHeap()
     InitializeHeap(VirtualAddressManager::GetKernelVirtualAddressManager(), PageAllocator::GetInstance());
 }
 
+void kInitKernelProcess() 
+{
+    memset(Processes, 0, sizeof(Process*) * MAX_PROCESSES);
+    auto kernelProcess = new Process(0, VirtualAddressManager::GetKernelVirtualAddressManager());
+    kernelProcess->Activate();
+    kernelProcess->Activated();
+    Processes[0] = kernelProcess;
+}
+
 void kInit(KernelParameters *kernelParameters)
 {
     DisableInterrupts();
@@ -121,6 +130,7 @@ void kInit(KernelParameters *kernelParameters)
     kInitHeap();
     kInitInterrupts();
     kInitApic();
+    kInitKernelProcess();
     EnableInterrupts();
     kInitFrameBuffer(kernelParameters->FrameBuffer);
     kInitConsoleFont(kernelParameters->Font);
