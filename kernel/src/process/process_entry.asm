@@ -7,4 +7,4 @@ ProcessStartTrampoline:
     call rax
     xor rdi, rdi ; syscall 0, ProcessExit
     mov rsi, rax ; sys$ProcessExit(RAX);
-    int 80       ; This will trigger process teardown.
+    int 80h       ; This will trigger process teardown.
