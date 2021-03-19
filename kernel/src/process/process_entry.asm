@@ -5,6 +5,6 @@ GLOBAL ProcessStartTrampoline
 ProcessStartTrampoline:
     mov rax, rdi
     call rax
-    xor rdi, rdi ; syscall 0, ProcessExit
-    mov rsi, rax ; sys$ProcessExit(RAX);
-    int 80h       ; This will trigger process teardown.
+    mov rdi, rax    ; Pass return code to the first parameter of the syscall
+    mov rax, 60     ; syscall 60, ProcessExit
+    int 80h         ; This will trigger process teardown.

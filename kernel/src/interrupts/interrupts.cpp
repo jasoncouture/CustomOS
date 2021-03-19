@@ -11,9 +11,43 @@
 #include <console/printf.hpp>
 #include <process/process.hpp>
 #include <console/console.hpp>
+#include <syscall/syscall.hpp>
 
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
+
+Process* ProcessDispatchStart(InterruptStack *frame)
+{
+    auto currentProcess = Process::Current();
+    currentProcess->SetProcessState(frame);
+    currentProcess->SaveFloatingPointState();
+    if (currentProcess->State == ProcessState::Running)
+        currentProcess->State = ProcessState::Ready;
+    return currentProcess;
+}
+
+Process* ProcessDispatchEnd(InterruptStack *frame)
+{
+    auto currentProcess = Process::Current();
+    auto nextProcess = Process::Next();
+    auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    nextProcess->State = ProcessState::Running;
+    if (nextProcess->GetProcessId() != currentProcess->GetProcessId())
+    {
+        eventLoop->Publish(new Event(EventType::ContextSwitch));
+        nextProcess->RestoreFloatingPointState();
+        nextProcess->RestoreProcessState(frame);
+        nextProcess->Activated();
+        nextProcess->State = ProcessState::Running;
+    }
+    return nextProcess;
+}
+
+void ProcessDispatch(InterruptStack *frame)
+{
+    ProcessDispatchStart(frame);
+    ProcessDispatchEnd(frame);
+}
 
 extern "C" void Interrupt_PageFaultHandler(struct InterruptStack *frame, size_t isr)
 {
@@ -34,6 +68,7 @@ extern "C" void Interrupt_GeneralProtectionFault(struct InterruptStack *frame, s
 
 extern "C" void Interrupt_KeyboardInput(struct InterruptStack *frame, size_t isr)
 {
+    ProcessDispatch(frame);
     static Kernel::Events::EventLoop *eventLoop = NULL;
     if (eventLoop == NULL)
     {
@@ -44,15 +79,20 @@ extern "C" void Interrupt_KeyboardInput(struct InterruptStack *frame, size_t isr
     eventLoop->Publish(new Event(EventType::KeyboardScanCode, scanCode));
 }
 
+extern "C" void Interrupt_Syscall(struct InterruptStack *frame, size_t isr)
+{
+    ProcessDispatchStart(frame);
+    HANDLE_SYSCALL(SYSCALL_EXIT, frame);
+
+    // Before completing dispatch, we need to re-save frame, as the syscall might have changed it.
+    Process::Current()->SetProcessState(frame);
+    ProcessDispatchEnd(frame);
+}
+
 extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
 {
     static Kernel::Events::EventLoop *eventLoop = NULL;
     static Kernel::Timer *timer = NULL;
-
-    auto currentProcess = Process::Current();
-    currentProcess->SetProcessState(frame);
-    currentProcess->SaveFloatingPointState();
-    currentProcess->State = ProcessState::Ready;
 
     if (timer == NULL)
     {
@@ -65,22 +105,7 @@ extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
     }
     eventLoop->Publish(new Event(EventType::TimerTick, timer->ElapsedTimeMilliseconds()));
     EndPicInterruptPrimary();
-
-    auto nextProcess = Process::Next();
-    nextProcess->State = ProcessState::Running;
-    if (nextProcess->GetProcessId() != currentProcess->GetProcessId())
-    {
-        auto console = KernelConsole::GetInstance();
-        auto position = console->GetCursorPosition();
-        auto size = console->GetConsoleSize();
-        console->SetCursorPosition(0, size.Y - 4);
-        printf("Switching context from %d to %d", currentProcess->GetProcessId(), nextProcess->GetProcessId());
-        console->SetCursorPosition(position.X, position.Y);        
-        eventLoop->Publish(new Event(EventType::ContextSwitch));
-        nextProcess->RestoreFloatingPointState();
-        nextProcess->RestoreProcessState(frame);
-        nextProcess->Activated();
-    }
+    ProcessDispatch(frame);
 }
 
 void DisableInterrupts()

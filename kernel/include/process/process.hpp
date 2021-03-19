@@ -48,6 +48,8 @@ public:
     void *FloatingPointState;
     void *Stack;
 
+    uint64_t ExitCode;
+
 private:
     InterruptStack interruptStack;
     static Process* current;

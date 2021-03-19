@@ -70,7 +70,6 @@ void InterruptDescriptors::SetInterruptHandler(void (*handler)(InterruptStack *,
 
     InterruptDescriptorTableEntry *entry = table + vector;
     memset(entry, 0, sizeof(InterruptDescriptorTableEntry));
-
     entry->SetOffset(vectorHandlerAddress);
     entry->TypeAndAttribute = typeAndAttribute;
     entry->Selector = globalDescriptorTableSelector; // Kernel code segment selector (See GDT);
