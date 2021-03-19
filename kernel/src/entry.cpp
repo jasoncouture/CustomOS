@@ -14,6 +14,7 @@
 #include <timer/timer.hpp>
 #include <console/printf.hpp>
 #include <event/keyboard/keyboard.hpp>
+#include <process/process.hpp>
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -67,8 +68,25 @@ void OnEvent(Event *event)
     }
 }
 
+int KernelEventLoop()
+{
+    printf("Kernel event thread started\r\n");
+    auto eventLoop = Kernel::Events::EventLoop::GetInstance();
+    eventLoop->Run(OnEvent);
+    return 0;
+}
+
 void kMain(KernelParameters *kernelParameters)
 {
+    Processes[1] = new Process(1, VirtualAddressManager::GetKernelVirtualAddressManager());
+    {
+        auto idleProcessStack = Processes[0]->GetInterruptStack();
+        Processes[1]->SetProcessState(&idleProcessStack);
+        Processes[1]->Initialize((void *)KernelEventLoop);
+        Processes[1]->SaveFloatingPointState();
+        Processes[1]->RestoreFloatingPointState();
+    }
+
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto bitmap = pageAllocator->GetBitmap();
@@ -77,9 +95,22 @@ void kMain(KernelParameters *kernelParameters)
     eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
         printf("WARN: Keyboard buffer is full\r\n");
     });
+    eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
+        Processes[0]->Activate();
+    });
+    Processes[1]->Activate();
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
     eventLoop->Publish(new Event(EventType::TimerTick, 1));
     eventLoop->Publish(new Event(EventType::TimerTick, 2));
     eventLoop->Publish(new Event(EventType::TimerTick, 3));
-    eventLoop->Run(OnEvent);
+    uint64_t counter = 0;
+    while (true)
+    {
+        counter++;
+
+        if ((counter % 1000) == 0)
+        {
+            printf("Main thread still alive\r\n");
+        }
+    }
 }

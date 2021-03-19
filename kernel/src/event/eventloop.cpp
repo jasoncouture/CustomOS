@@ -27,6 +27,7 @@ void EventLoop::Run(void (*onEvent)(Event *))
             asm("hlt"); // Wait for an interrupt to wake us up.
             continue;
         }
+        asm("sti");
         
         if(onEvent != NULL)
             onEvent(next);
@@ -39,7 +40,7 @@ void EventLoop::Run(void (*onEvent)(Event *))
             }
         }
         delete next;
-        asm("sti");
+        
     }
 }
 

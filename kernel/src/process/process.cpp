@@ -1,6 +1,8 @@
 #include <process/process.hpp>
-#include <interrupts/interruptframe.hpp>
 #include <memory/heap.hpp>
+
+Process *Process::current = NULL;
+Process *Process::next = NULL;
 
 Process::Process(int64_t processId) : Process(processId, new VirtualAddressManager())
 {
@@ -16,14 +18,64 @@ Process::Process(int64_t processId, VirtualAddressManager *virtualAddressManager
 void Process::Initialize(void *entrypoint, uint64_t stackSize)
 {
     this->StackBase = this->Stack = calloc(stackSize, 1);
-    auto initialFrame = (InterruptStack *)this->Stack;
-    initialFrame->rdi = (uint64_t)entrypoint;
-    // initialFrame->rsp = (uint64_t)((InterruptStack *)this->Stack + 1);
-    // initialFrame->rbp = (uint64_t)this->Stack;
-    initialFrame->rip = (uint64_t)(void *)ProcessStartTrampoline;
-    initialFrame->ss = 0x10;
-    initialFrame->cs = 0x08;
-    // This is the stack we'll restore in an interrupt to launch this process.
-    this->Stack = initialFrame + 1;
-
+    InterruptStack initialFrame = this->interruptStack;
+    initialFrame.ss = 0x10;
+    initialFrame.cs = 0x08;
+    initialFrame.rip = (uint64_t)(void *)ProcessStartTrampoline;
+    initialFrame.rdi = (uint64_t)entrypoint;
+    initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + stackSize);
+    initialFrame.rsp = initialFrame.rbp;
+    this->interruptStack = initialFrame;
 }
+
+InterruptStack Process::GetInterruptStack()
+{
+    return this->interruptStack;
+}
+
+void Process::SetProcessState(InterruptStack *current)
+{
+    this->interruptStack = *current;
+}
+
+void Process::RestoreProcessState(InterruptStack *current)
+{
+    *current = this->interruptStack;
+}
+
+void Process::SaveFloatingPointState()
+{
+    asm volatile(
+        "fnsave %0"
+        : "=m"(*((uint8_t *)this->FloatingPointState)));
+}
+
+void Process::RestoreFloatingPointState()
+{
+    asm volatile(
+        "frstor %0"
+        :
+        : "m"(*((uint8_t *)this->FloatingPointState)));
+}
+
+void Process::Activated()
+{
+    Process::current = Process::next;
+}
+
+void Process::Activate()
+{
+    Process::next = this;
+}
+
+// Stubs
+
+void Process::Finalize()
+{
+}
+
+void Process::Reap()
+{
+}
+
+Process *Processes[MAX_PROCESSES];
