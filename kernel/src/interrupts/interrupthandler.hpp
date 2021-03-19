@@ -29,4 +29,5 @@ extern "C"
     extern void isr36();
     extern void isr37();
     extern void isr39();
+    extern void isr128();
 }
