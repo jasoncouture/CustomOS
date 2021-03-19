@@ -79,6 +79,7 @@ extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
         eventLoop->Publish(new Event(EventType::ContextSwitch));
         nextProcess->RestoreFloatingPointState();
         nextProcess->RestoreProcessState(frame);
+        nextProcess->Activated();
     }
 }
 

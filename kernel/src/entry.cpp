@@ -97,6 +97,11 @@ void kMain(KernelParameters *kernelParameters)
     });
     eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
         Processes[0]->Activate();
+        printf("T");
+    });
+
+    eventLoop->SetHandler(EventType::ContextSwitch, [](Event* event){
+        printf(".");
     });
     Processes[1]->Activate();
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
@@ -106,11 +111,7 @@ void kMain(KernelParameters *kernelParameters)
     uint64_t counter = 0;
     while (true)
     {
-        counter++;
-
-        if ((counter % 1000) == 0)
-        {
-            printf("Main thread still alive\r\n");
-        }
+        Processes[1]->Activate();
+        asm("hlt");
     }
 }
