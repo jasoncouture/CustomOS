@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <interrupts/interruptframe.hpp>
-#define SYSCALL_EXIT 60
+#define SYSCALL_EXIT 1
 #define SYSCALL1(syscall) SYSCALL2(syscall, __UNUSED_RAX)
 #define SYSCALL2(syscall, p1) SYSCALL3(syscall, p1, __UNUSED_RDI)
 #define SYSCALL3(syscall, p1, p2) SYSCALL4(syscall, p1, p2, __UNUSED_RSI)
@@ -12,7 +12,7 @@
 #define SYSCALL(...) GET_MACRO(__VA_ARGS__, SYSCALL6, SYSCALL5, SYSCALL4, SYSCALL3, SYSCALL2, SYSCALL1) \
 (__VA_ARGS__)
 
-SYSCALL(60);
+SYSCALL(1);
 
 #define CALL_SYSCALL(syscall, frame) sys$##syscall(frame->rax, frame->rdi, frame->rsi, frame->rdx, frame)
 #define HANDLE_SYSCALL(syscall, frame) \
