@@ -46,17 +46,12 @@ void Process::RestoreProcessState(InterruptStack *current)
 
 void Process::SaveFloatingPointState()
 {
-    asm volatile(
-        "fnsave %0"
-        : "=m"(*((uint8_t *)this->FloatingPointState)));
+    asm volatile("fnsave %0" : "=m"(*((uint8_t *)this->FloatingPointState)));
 }
 
 void Process::RestoreFloatingPointState()
 {
-    asm volatile(
-        "frstor %0"
-        :
-        : "m"(*((uint8_t *)this->FloatingPointState)));
+    asm volatile("frstor %0" : : "m"(*((uint8_t *)this->FloatingPointState)));
 }
 
 void Process::Activated()
