@@ -3,6 +3,7 @@
 
 Process *Process::current = NULL;
 Process *Process::next = NULL;
+LinkedList<Process*> *Process::processes = NULL;
 
 Process::Process(int64_t processId) : Process(processId, new VirtualAddressManager())
 {
@@ -74,5 +75,3 @@ void Process::Finalize()
 void Process::Reap()
 {
 }
-
-Process *Processes[MAX_PROCESSES];

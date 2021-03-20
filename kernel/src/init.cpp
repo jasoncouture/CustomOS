@@ -114,11 +114,11 @@ void kInitHeap()
 
 void kInitKernelProcess() 
 {
-    memset(Processes, 0, sizeof(Process*) * MAX_PROCESSES);
     auto kernelProcess = new Process(0, VirtualAddressManager::GetKernelVirtualAddressManager());
     kernelProcess->Activate();
     kernelProcess->Activated();
-    Processes[0] = kernelProcess;
+    kernelProcess->State = ProcessState::Running;
+    Process::Add(kernelProcess);
 }
 
 void kInit(KernelParameters *kernelParameters)

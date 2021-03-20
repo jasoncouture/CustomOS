@@ -78,11 +78,12 @@ int KernelEventLoop()
 
 void kMain(KernelParameters *kernelParameters)
 {
-    Processes[1] = new Process(1, VirtualAddressManager::GetKernelVirtualAddressManager());
+    auto eventLoopProcess = new Process(1, VirtualAddressManager::GetKernelVirtualAddressManager());
     {
-        Processes[1]->Initialize((void *)KernelEventLoop);
-        Processes[1]->SaveFloatingPointState();
-        Processes[1]->RestoreFloatingPointState();
+        eventLoopProcess->Initialize((void *)KernelEventLoop);
+        eventLoopProcess->SaveFloatingPointState();
+        eventLoopProcess->RestoreFloatingPointState();
+        Process::Add(eventLoopProcess);
     }
 
     auto pageAllocator = PageAllocator::GetInstance();
@@ -94,14 +95,23 @@ void kMain(KernelParameters *kernelParameters)
         printf("WARN: Keyboard buffer is full\r\n");
     });
     eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
-        Processes[0]->Activate();
+        auto processList = *Process::GetProcessList();
+        for (auto item : processList)
+        {
+            auto process = item.Value;
+            if (process->GetProcessId() == 0)
+            {
+                process->Activate();
+                break;
+            }
+        }
         printf("T");
     });
 
-    eventLoop->SetHandler(EventType::ContextSwitch, [](Event* event){
+    eventLoop->SetHandler(EventType::ContextSwitch, [](Event *event) {
         printf(".");
     });
-    Processes[1]->Activate();
+    eventLoopProcess->Activate();
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
     eventLoop->Publish(new Event(EventType::TimerTick, 1));
     eventLoop->Publish(new Event(EventType::TimerTick, 2));
@@ -109,7 +119,16 @@ void kMain(KernelParameters *kernelParameters)
     uint64_t counter = 0;
     while (true)
     {
-        Processes[1]->Activate();
+        auto processList = *Process::GetProcessList();
+        for (auto item : processList)
+        {
+            auto process = item.Value;
+            if (process->GetProcessId() == 1)
+            {
+                process->Activate();
+                break;
+            }
+        }
         asm("hlt");
     }
 }
