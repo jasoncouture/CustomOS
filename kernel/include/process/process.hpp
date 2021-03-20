@@ -33,12 +33,12 @@ extern "C"
 class Process
 {
 public:
-    Process(int64_t);
-    Process(int64_t, VirtualAddressManager *);
+    Process();
+    Process(VirtualAddressManager *);
     int64_t GetProcessId() { return this->processId; }
     static Process *Current() { return Process::current; }
     static Process *Next() { return Process::next; }
-
+    static int64_t NextId();
     static void Add(Process *process)
     {
         GetProcessList()->Add(process);

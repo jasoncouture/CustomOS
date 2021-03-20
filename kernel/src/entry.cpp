@@ -15,6 +15,7 @@
 #include <console/printf.hpp>
 #include <event/keyboard/keyboard.hpp>
 #include <process/process.hpp>
+#include <console/console.hpp>
 
 #define RED 0x000000FF
 #define GREEN 0x0000FF00
@@ -70,29 +71,59 @@ void OnEvent(Event *event)
 
 int KernelEventLoop()
 {
-    printf("Kernel event thread started\r\n");
+    //printf("Kernel event thread started\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     eventLoop->Run(OnEvent);
     return 0;
 }
 
+void DumpThreadInfo()
+{
+    auto console = KernelConsole::GetInstance();
+    auto processes = *(Process::GetProcessList());
+    while (true)
+    {
+        asm("cli");
+        console->SetCursorPosition(0, 0);
+        
+        auto myId = Process::Current()->GetProcessId();
+        for (auto linkedListEntry : processes)
+        {
+            if (linkedListEntry.Value->GetProcessId() != myId)
+            {
+                linkedListEntry.Value->Activate();
+            }
+            printf("PID: %d, State: %d, Name: NOT SUPPORTED YET      \r\n", linkedListEntry.Value->GetProcessId(), linkedListEntry.Value->State);
+        }
+        asm("sti");
+        asm("hlt");
+    }
+}
+
 void kMain(KernelParameters *kernelParameters)
 {
-    auto eventLoopProcess = new Process(1, VirtualAddressManager::GetKernelVirtualAddressManager());
+    auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
     {
         eventLoopProcess->Initialize((void *)KernelEventLoop);
         eventLoopProcess->SaveFloatingPointState();
         eventLoopProcess->RestoreFloatingPointState();
         Process::Add(eventLoopProcess);
     }
+    {
+        auto dumpProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
+        dumpProcess->Initialize((void*)DumpThreadInfo);
+        dumpProcess->SaveFloatingPointState();
+        dumpProcess->RestoreFloatingPointState();
+        Process::Add(dumpProcess);
+    }
 
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto bitmap = pageAllocator->GetBitmap();
-    printf("Kernel booted. Starting event loop.\r\n");
+    //printf("Kernel booted. Starting event loop.\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
-        printf("WARN: Keyboard buffer is full\r\n");
+        //printf("WARN: Keyboard buffer is full\r\n");
     });
     eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
         auto processList = *Process::GetProcessList();
@@ -105,11 +136,11 @@ void kMain(KernelParameters *kernelParameters)
                 break;
             }
         }
-        printf("T");
+        //printf("T");
     });
 
     eventLoop->SetHandler(EventType::ContextSwitch, [](Event *event) {
-        printf(".");
+        //printf(".");
     });
     eventLoopProcess->Activate();
     eventLoop->Publish(new Event(EventType::TimerTick, 0));
@@ -119,16 +150,17 @@ void kMain(KernelParameters *kernelParameters)
     uint64_t counter = 0;
     while (true)
     {
+        asm("cli");
         auto processList = *Process::GetProcessList();
         for (auto item : processList)
         {
             auto process = item.Value;
-            if (process->GetProcessId() == 1)
+            if (process->GetProcessId() != 0)
             {
                 process->Activate();
-                break;
             }
         }
+        asm("sti");
         asm("hlt");
     }
 }

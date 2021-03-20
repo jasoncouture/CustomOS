@@ -3,15 +3,38 @@
 
 Process *Process::current = NULL;
 Process *Process::next = NULL;
-LinkedList<Process*> *Process::processes = NULL;
+LinkedList<Process *> *Process::processes = NULL;
 
-Process::Process(int64_t processId) : Process(processId, new VirtualAddressManager())
+int64_t Process::NextId()
+{
+    int64_t nextId = 0;
+    bool didModifyId = true;
+    auto processList = *(Process::GetProcessList());
+    while (didModifyId)
+    {
+        didModifyId = false;
+        for (auto linkedListEntry : processList)
+        {
+            auto processId = linkedListEntry.Value->processId;
+            if (processId == nextId)
+            {
+                didModifyId = true;
+                nextId = nextId + 1;
+            }
+        }
+    }
+
+    return nextId;
+}
+
+Process::Process() : Process(new VirtualAddressManager())
 {
 }
 
-Process::Process(int64_t processId, VirtualAddressManager *virtualAddressManager)
+Process::Process(VirtualAddressManager *virtualAddressManager)
 {
-    this->processId = processId;
+
+    this->processId = Process::NextId();
     this->virtualAddressManager = virtualAddressManager;
     this->FloatingPointState = calloc(108, 1);
 }
@@ -48,12 +71,15 @@ void Process::RestoreProcessState(InterruptStack *current)
 
 void Process::SaveFloatingPointState()
 {
-    asm volatile("fnsave %0" : "=m"(*((uint8_t *)this->FloatingPointState)));
+    asm volatile("fnsave %0"
+                 : "=m"(*((uint8_t *)this->FloatingPointState)));
 }
 
 void Process::RestoreFloatingPointState()
 {
-    asm volatile("frstor %0" : : "m"(*((uint8_t *)this->FloatingPointState)));
+    asm volatile("frstor %0"
+                 :
+                 : "m"(*((uint8_t *)this->FloatingPointState)));
 }
 
 void Process::Activated()
