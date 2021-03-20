@@ -2,7 +2,7 @@
 #include <process/process.hpp>
 #include <panic.hpp>
 
-SYSCALL(60, syscall, exitCode)
+SYSCALL(SYSCALL_EXIT, syscall, exitCode)
 {
     auto currentProcess = Process::Current();
     if (currentProcess->GetProcessId() == 0)
