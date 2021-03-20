@@ -15,7 +15,7 @@ Process::Process(int64_t processId, VirtualAddressManager *virtualAddressManager
     this->FloatingPointState = calloc(108, 1);
 }
 
-void Process::Initialize(void *entrypoint, uint64_t stackSize)
+void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)
 {
     this->StackBase = this->Stack = calloc(stackSize, 1);
     InterruptStack initialFrame = this->interruptStack;
@@ -26,6 +26,7 @@ void Process::Initialize(void *entrypoint, uint64_t stackSize)
     initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + stackSize);
     initialFrame.rsp = initialFrame.rbp;
     initialFrame.cr3 = (uint64_t)this->virtualAddressManager->GetPageTableAddress();
+    initialFrame.rflags = flags;
     this->interruptStack = initialFrame;
 }
 

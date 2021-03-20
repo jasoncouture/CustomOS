@@ -3,6 +3,10 @@
 #include <interrupts/interruptframe.hpp>
 #include <stdint.h>
 
+// bit 2 is always set, Also enable interrupts in newly created processes
+// and allow CPUID
+#define DEFAULT_FLAGS 0x02 | 0x0200 | 0x00200000
+
 #ifndef MAX_PROCESSES
 #define MAX_PROCESSES 0xFFFF
 #endif
@@ -36,7 +40,7 @@ public:
     void Activate();
     void Activated();
     VirtualAddressManager *GetVirtualAddressManager() { return this->virtualAddressManager; }
-    void Initialize(void *entrypoint, uint64_t stackSize = DEFAULT_STACK_SIZE);
+    void Initialize(void *entrypoint, uint64_t stackSize = DEFAULT_STACK_SIZE, uint64_t flags = DEFAULT_FLAGS);
     void SetProcessState(InterruptStack* interruptStack);
     void RestoreProcessState(InterruptStack* interruptStack);
     void SaveFloatingPointState();

@@ -80,8 +80,6 @@ void kMain(KernelParameters *kernelParameters)
 {
     Processes[1] = new Process(1, VirtualAddressManager::GetKernelVirtualAddressManager());
     {
-        auto idleProcessStack = Processes[0]->GetInterruptStack();
-        Processes[1]->SetProcessState(&idleProcessStack);
         Processes[1]->Initialize((void *)KernelEventLoop);
         Processes[1]->SaveFloatingPointState();
         Processes[1]->RestoreFloatingPointState();
