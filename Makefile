@@ -20,15 +20,16 @@ kernel: bootloader
 	
 diskimage: kernel font
 	@ echo === Building disk image $(OSIMAGE)
+	@ cp $(BOOTEFI) $(BUILDDIR)/BOOTx64.efi
 	@ dd if=/dev/zero of=$(OSIMAGETEMP) bs=16384 count=4096
 	@ echo === Formatting $(OSIMAGE)
 	@ mkfs -t fat -F 32 -n "EFI_SYSTEM" -v $(OSIMAGETEMP)
 	@ echo === Creating /EFI/BOOT in $(OSIMAGE)
 	@ mmd -i $(OSIMAGETEMP) ::/EFI ::/EFI/BOOT
 	@ echo === Copying $(BOOTEFI) to /EFI/BOOT in $(OSIMAGE)
-	@ mcopy -i $(OSIMAGETEMP) $(BOOTEFI) ::/EFI/BOOT
-	@ echo === Copying startup.nsh, $(KERNEL), $(FONT) to / in $(OSIMAGE)
-	@ mcopy -i $(OSIMAGETEMP) startup.nsh $(KERNEL) $(FONT) ::
+	@ mcopy -i $(OSIMAGETEMP) $(BUILDDIR)/BOOTx64.efi ::/EFI/BOOT
+	@ echo === $(KERNEL), $(FONT) to / in $(OSIMAGE)
+	@ mcopy -i $(OSIMAGETEMP) $(KERNEL) $(FONT) ::
 	@ mv $(OSIMAGETEMP) $(OSIMAGE)
 
 clean:
