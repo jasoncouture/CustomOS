@@ -311,9 +311,10 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	kernelParameters->Font = consoleFont;
 
 	systemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &descriptorVersion); // This first call populates everything but map, since map is NULL
+	mapSize = mapSize + (2 * descriptorSize);
 	systemTable->BootServices->AllocatePool(EfiLoaderData, mapSize, (void **)&map);						  // Allocate space for map based on the previous call
 	systemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &descriptorVersion); // And pass everything we did before, this time actually populating the map.
-	//DumpMemoryMap(map, mapSize, descriptorSize, systemTable);
+	DumpMemoryMap(map, mapSize, descriptorSize, systemTable);
 	//while(1);
 
 	bootMemoryMap->MemoryMap = (void *)map; // Convert this to the kernels representation of the memory map. The data structure is the same.
