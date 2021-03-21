@@ -26,4 +26,5 @@ struct KernelParameters
 	struct FrameBuffer *FrameBuffer;
 	struct Font *Font;
 	struct BootMemoryMap *BootMemoryMap;
+	void *FirmwareRuntimeServices;
 };

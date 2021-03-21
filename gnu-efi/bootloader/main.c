@@ -52,7 +52,6 @@ void DumpMemoryMap(EFI_MEMORY_DESCRIPTOR *memoryMap, size_t size, size_t descrip
 		if (descriptor->Type != EfiConventionalMemory)
 			continue; // Let's see where we can write.
 		Print(L"0x%02x: 0x%016x-0x%016x\r\n", descriptor->Type, descriptor->PhysicalStart, descriptor->PhysicalStart + (0x1000 * descriptor->NumberOfPages));
-		systemTable->BootServices->Stall(5000);
 	}
 }
 
@@ -127,9 +126,6 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 	if (bootFailed)
 		return BootFailed();
 
-	Print(L"Kernel ELF Header validated successfully\r\n");
-	Print(L"Reading program headers\r\n");
-
 	Elf64_Phdr *programHeaders;
 	{
 		kernel->SetPosition(kernel, header.e_phoff);
@@ -156,11 +152,11 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 		}
 	}
 	uint64_t kernelBytes = (high_addr - low_addr);
-	if(align < (1024*1024))
+	if (align < (1024 * 1024))
 	{
-		align = 1024*1024;
+		align = 1024 * 1024;
 	}
-	if(kernelBytes % align)
+	if (kernelBytes % align)
 	{
 		kernelBytes -= kernelBytes % align;
 		kernelBytes += align;
@@ -169,34 +165,32 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 	if (kernelBytes % 4096)
 		kernelPages++;
 
-	Print(L"%016x-%016x %016x\r\n", low_addr, high_addr, kernelBytes);
-	Print(L"%016x %016x\r\n", kernelPages, align);
 	void *kernelSpace = NULL;
 	EFI_STATUS status = EFI_SUCCESS;
 	// block the first 1MB of ram.
-	systemTable->BootServices->AllocatePages(AllocateAddress, EfiUnusableMemory, 0x100, (void*)&kernelSpace);
+	systemTable->BootServices->AllocatePages(AllocateAddress, EfiUnusableMemory, 0x100, (void *)&kernelSpace);
 	kernelSpace = NULL;
 	// Allocate any space that can hold the entire kernel.
-	status = systemTable->BootServices->AllocatePages(AllocateAnyPages, EfiLoaderCode, kernelPages, (void*)&kernelSpace);
-	if(EFI_ERROR(status)) 
+	status = systemTable->BootServices->AllocatePages(AllocateAnyPages, EfiLoaderCode, kernelPages, (void *)&kernelSpace);
+	if (EFI_ERROR(status))
 	{
 		Print(L"Failed to allocate space for OS Kernel Image. (0x%x)\r\n", status);
 		return status;
 	}
-	
+
 	// Compute a relocation offset from our new address.
 	uint8_t relocate = 0;
 	uint64_t relocationOffset = (uint64_t)kernelSpace - low_addr;
-	if(!relocate) {
+	if (!relocate)
+	{
 		Print(L"Kernel relocation disabled.\r\nClearing offsets and loading according to kernel addresses.\r\n");
 		relocationOffset = 0;
 		systemTable->BootServices->FreePages((uint64_t)kernelSpace, kernelPages);
-		kernelSpace = (void*)low_addr;
-		
+		kernelSpace = (void *)low_addr;
+
 		systemTable->BootServices->AllocatePages(AllocateAddress, EfiLoaderCode, kernelPages, kernelSpace);
 	}
-	Print(L"Relocating to offset: %016x\r\n", kernelSpace);
-	Print(L"Adding offset to physical addresses: %016x\r\n", relocationOffset);
+	Print(L"Relocating kernel to offset: %016x\r\n", kernelSpace);
 	systemTable->BootServices->SetMem(kernelSpace, kernelPages << 12, 0); // ELF spec requires any pages we don't load
 																		  // get zeroed out. We can just zero the entire
 																		  // address space here, and avoid doing it per
@@ -213,8 +207,7 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 		{
 			// Add our relocated offset to the physical offset from the ELF binary
 			// This is the actual physical location of this ELF segment.
-			void *segment = (void *)(relocationOffset + programHeader->p_paddr); //(void *)programHeader->p_paddr;
-			Print(L"Loading segment: %016x (%016x bytes)\r\n", segment, programHeader->p_memsz);
+			void *segment = (void *)(relocationOffset + programHeader->p_paddr);
 			if (programHeader->p_filesz > 0)
 			{
 				kernel->SetPosition(kernel, programHeader->p_offset); // Seek to the appropriate location in the kernel
@@ -230,10 +223,7 @@ EFI_STATUS LoadKernelEntry(uint64_t *kernelStart, EFI_HANDLE imageHandle, EFI_SY
 		}
 		}
 	}
-
-	Print(L"Kernel loaded, executing entrypoint at address: %012x\r\n", header.e_entry);
 	*kernelStart = header.e_entry + relocationOffset;
-	Print(L"Relocated entry point: 0x%012x\r\n", *kernelStart);
 	return EFI_SUCCESS;
 }
 
@@ -259,7 +249,6 @@ struct Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle,
 
 	void *glyphBuffer;
 	systemTable->BootServices->AllocatePool(EfiLoaderData, glyphBufferSize, (void **)&glyphBuffer);
-	Print(L"Allocated %d bytes for the glpyh buffer pool at %016x\r\n", glyphBufferSize, glyphBuffer);
 	size = sizeof(struct FontHeader);
 	font->SetPosition(font, size);
 	font->Read(font, &glyphBufferSize, glyphBuffer);
@@ -275,7 +264,6 @@ struct Font *LoadFont(EFI_FILE *directory, CHAR16 *path, EFI_HANDLE imageHandle,
 EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 {
 	InitializeLib(imageHandle, systemTable);
-	Print(L"UEFI Library initializtion successful.\r\n");
 
 	uint64_t kernelStartAddress;
 	EFI_STATUS kernelLoadStatus = LoadKernelEntry(&kernelStartAddress, imageHandle, systemTable);
@@ -285,15 +273,12 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	}
 
 	struct FrameBuffer *frameBuffer = InitializeGraphics();
-	Print(L"Base: 0x%016X\r\nSize %d\r\nWidth: %d\r\nHeight: %d\r\nPixels per scan line: %d\r\nPixel format: %d\r\n\r\n", frameBuffer->BaseAddress, frameBuffer->Size, frameBuffer->Width, frameBuffer->Height, frameBuffer->PixelsPerScanLine, frameBuffer->PixelFormat);
 	struct Font *consoleFont = LoadFont(NULL, L"zap-light16.psf", imageHandle, systemTable);
 	if (consoleFont == NULL || consoleFont->GlyphBuffer == NULL)
 	{
-		Print(L"System console font was not found, or invalid!\r\n");
+		Print(L"ERROR: System console font was not found, or invalid!\r\n");
 		return EFI_NOT_FOUND;
 	}
-	Print(L"Console font loaded, character size: %d\r\n", consoleFont->Header->CharacterSize);
-	Print(L"Glyph buffer location: 0x%016x\r\n", consoleFont->GlyphBuffer);
 	// I see a few problems with this code now. Specifically the kernel loading code.
 	// We're ignoring the memory map and blindly loading at offset 0
 	// This is not EfiConventionalMemory (Type 7)
@@ -322,9 +307,8 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE *systemTable)
 	bootMemoryMap->MemoryMapDescriptorSize = descriptorSize;
 	kernelParameters->BootMemoryMap = bootMemoryMap;
 	// Time to terminate boot services.
-	Print(L"Exiting boot services and entering kernel. Farewell!\r\n");
 	systemTable->BootServices->ExitBootServices(imageHandle, mapKey);
-
+	kernelParameters->FirmwareRuntimeServices = systemTable->RuntimeServices;
 	// Transfer execution to the kernel.
 	KernelStart kernelStart = (KernelStart)kernelStartAddress;
 	kernelStart(kernelParameters);
