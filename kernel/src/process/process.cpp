@@ -35,6 +35,7 @@ Process::Process(VirtualAddressManager *virtualAddressManager)
 {
 
     this->processId = Process::NextId();
+    this->interruptStack = InterruptStack();
     this->virtualAddressManager = virtualAddressManager;
     this->FloatingPointState = calloc(108, 1);
 }
