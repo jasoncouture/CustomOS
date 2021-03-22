@@ -79,26 +79,32 @@ int KernelEventLoop()
 
 void kMain(KernelParameters *kernelParameters)
 {
+    auto pageAllocator = PageAllocator::GetInstance();
+    auto memory = Memory::GetInstance();
+    auto bitmap = pageAllocator->GetBitmap();
+    auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
+    printf("Booting with %d MiB of memory total\r\n", memory->Size() / (1024 * 1024));
+    printf("Free memory: %d MiB\r\n", freeMemoryInfo.BytesFree / (1024 * 1024));
+    printf("Reserved memory: %d MiB\r\n", freeMemoryInfo.BytesReserved / (1024 * 1024));
     auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "EventLoop");
     {
         eventLoopProcess->Initialize((void *)KernelEventLoop);
         Process::Add(eventLoopProcess);
+        printf("Event loop thread scheduled, Process ID: %d\r\n", eventLoopProcess->GetProcessId());
     }
 
-    auto pageAllocator = PageAllocator::GetInstance();
-    auto memory = Memory::GetInstance();
-    auto bitmap = pageAllocator->GetBitmap();
-    printf("Kernel booted. Starting event loop.\r\n");
+
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
         printf("WARN: Keyboard buffer is full\r\n");
     });
 
+
+    printf("Event handlers attached. Entering scheduler loop\r\n");
     uint64_t counter = 0;
     while (true)
     {
         // Very, VERY simple scheduler.
-        auto console = KernelConsole::GetInstance();
         auto processList = *Process::GetProcessList();
         bool didSchedule = false;
         for (auto process : processList)
@@ -118,7 +124,7 @@ void kMain(KernelParameters *kernelParameters)
             //double timeTaken = Kernel::Timer::GetInstance()->ElapsedTime() - startTime;
             //printf("Control Returned to scheduler after %f seconds.\r\n", timeTaken);
         }
-        if(!didSchedule)
+        if (!didSchedule)
         {
             //printf("Halting because no processes were scheduled. Will try again next interrupt.\r\n");
             //double startTime = Kernel::Timer::GetInstance()->ElapsedTime();
