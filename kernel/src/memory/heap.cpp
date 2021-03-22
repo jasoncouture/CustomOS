@@ -4,6 +4,7 @@
 #include <memory/heap.hpp>
 #include <memory/paging/virtualaddressmanager.hpp>
 #include <memory/pageallocator.hpp>
+#include <debug.hpp>
 
 #define EARLY_HEAP_SIZE 0x10000
 #define MINIMUM_ALLOCATION_UNIT 24
@@ -232,12 +233,14 @@ void *malloc(size_t size)
             if (current->Length > size)
             {
                 auto target = current->Split(size);
+                ASSERT(target->Length >= size);
                 target->ClearFlag(HeapSegmentFlag::IsFree);
                 return target->Address();
             }
             else if (current->Length == size)
             {
                 current->ClearFlag(HeapSegmentFlag::IsFree);
+                ASSERT(current->Length >= size);
                 return current->Address();
             }
         }
@@ -289,6 +292,10 @@ void free(void *address)
 void *calloc(size_t count, size_t size)
 {
     auto pointer = malloc(count * size);
+    if(pointer == NULL)
+    {
+        return NULL;
+    }
     memset(pointer, 0, count * size);
     return pointer;
 }
