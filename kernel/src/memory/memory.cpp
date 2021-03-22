@@ -4,14 +4,15 @@
 
 Memory *Memory::Instance = NULL;
 
-uint64_t ComputeSize(BootMemoryMap *bootMemoryMap) 
+uint64_t ComputeSize(BootMemoryMap *bootMemoryMap)
 {
     uint64_t memorySizeBytes = 0;
     uint64_t entries = bootMemoryMap->MemoryMapSize / bootMemoryMap->MemoryMapDescriptorSize;
     for (uint64_t i = 0; i < entries; i++)
     {
         BootMemoryDescriptor *descriptor = (BootMemoryDescriptor *)((uint64_t)bootMemoryMap->MemoryMap + (i * bootMemoryMap->MemoryMapDescriptorSize));
-        if(descriptor->PageCount == 0 || (uint64_t)descriptor->PhysicalAddress == 0xffffffffffffffff) continue;
+        if (descriptor->PageCount == 0 || (uint64_t)descriptor->PhysicalAddress == 0xffffffffffffffff)
+            continue;
         memorySizeBytes += descriptor->PageCount;
     }
 
@@ -34,7 +35,7 @@ Memory *Memory::GetInstance()
 Memory *Memory::Initialize(BootMemoryMap *bootMemoryMap)
 {
     static bool initialized = false;
-    if(!initialized) 
+    if (!initialized)
     {
         initialized = true;
         Instance = new Memory(bootMemoryMap);
@@ -51,23 +52,64 @@ uint64_t Memory::Size()
     return memorySizeBytes;
 }
 
-BootMemoryMap *Memory::GetBootMemoryMap() 
+BootMemoryMap *Memory::GetBootMemoryMap()
 {
     return this->bootMemoryMap;
 }
 
-void memset(void* memoryLocation, uint8_t value, size_t size) 
+void memset(void *memoryLocation, uint8_t value, size_t size)
 {
-    auto buffer = (uint8_t*)memoryLocation;
-    for(size_t i = 0; i < size; i++)
+    auto buffer = (uint8_t *)memoryLocation;
+    for (size_t i = 0; i < size; i++)
         buffer[i] = value;
 }
 
-void memcopy(void* source, void* destination, size_t size) 
+void memcopy(uint64_t *source, uint64_t *destination, size_t size)
 {
-    uint8_t* sourceBuffer = (uint8_t*)source;
-    uint8_t* destinationBuffer = (uint8_t*)destination;
+    auto remainder = size % sizeof(uint64_t);
 
-    for(size_t x =0; x < size; x++) 
-        *(destinationBuffer + x) = *(sourceBuffer + x);
+    for (size_t x = 0; x < (size - remainder); x += sizeof(uint64_t))
+    {
+        auto offset = x / sizeof(uint64_t);
+        destination[offset] = source[offset];
+    }
+    if (remainder)
+        memcopy(((uint8_t *)source + (size - remainder)), ((uint8_t *)destination + (size - remainder)), remainder);
+}
+
+void memcopy(uint32_t *source, uint32_t *destination, size_t size)
+{
+    auto remainder = size % sizeof(uint32_t);
+
+    for (size_t x = 0; x < (size - remainder); x += sizeof(uint32_t))
+    {
+        auto offset = x / sizeof(uint32_t);
+        destination[offset] = source[offset];
+    }
+
+    if (remainder)
+        memcopy(((uint8_t *)source + (size - remainder)), ((uint8_t *)destination + (size - remainder)), remainder);
+}
+
+inline void memcopy(uint8_t *source, uint8_t *destination, size_t size)
+{
+    for (size_t x = 0; x < size; x++)
+        destination[x] = source[x];
+}
+
+void memcopy(void *source, void *destination, size_t size)
+{
+    if (size >= sizeof(uint64_t))
+    {
+        memcopy((uint64_t *)source, (uint64_t *)destination, size);
+        return;
+    }
+
+    if (size >= sizeof(uint32_t))
+    {
+        memcopy((uint32_t *)source, (uint32_t *)destination, size);
+        return;
+    }
+
+    memcopy((uint8_t *)source, (uint8_t *)destination, size);
 }
