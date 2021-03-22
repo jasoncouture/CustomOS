@@ -233,14 +233,12 @@ void *malloc(size_t size)
             if (current->Length > size)
             {
                 auto target = current->Split(size);
-                ASSERT(target->Length >= size);
                 target->ClearFlag(HeapSegmentFlag::IsFree);
                 return target->Address();
             }
             else if (current->Length == size)
             {
                 current->ClearFlag(HeapSegmentFlag::IsFree);
-                ASSERT(current->Length >= size);
                 return current->Address();
             }
         }
