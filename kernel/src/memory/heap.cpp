@@ -300,8 +300,8 @@ void *calloc(size_t count, size_t size)
     return pointer;
 }
 
-void *operator new(size_t size) { return calloc(1, size); }
-void *operator new[](size_t size) { return calloc(1, size); }
+void *operator new(size_t size) { return malloc(size); }
+void *operator new[](size_t size) { return malloc(size); }
 void operator delete(void *p) { free(p); }
 void operator delete[](void *p) { free(p); }
 void operator delete(void *p, uint64_t size) { free(p); }
