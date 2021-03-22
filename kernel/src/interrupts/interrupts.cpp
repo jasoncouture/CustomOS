@@ -16,7 +16,7 @@
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
 
-Process* ProcessDispatchStart(InterruptStack *frame)
+Process *ProcessDispatchStart(InterruptStack *frame)
 {
     auto currentProcess = Process::Current();
     currentProcess->SetProcessState(frame);
@@ -26,7 +26,7 @@ Process* ProcessDispatchStart(InterruptStack *frame)
     return currentProcess;
 }
 
-Process* ProcessDispatchEnd(InterruptStack *frame)
+Process *ProcessDispatchEnd(InterruptStack *frame)
 {
     auto currentProcess = Process::Current();
     auto nextProcess = Process::Next();
@@ -52,8 +52,7 @@ void ProcessDispatch(InterruptStack *frame)
 extern "C" void Interrupt_PageFaultHandler(struct InterruptStack *frame, size_t isr)
 {
     char buffer[1024];
-    sprintf(buffer, "PAGE FAULT @ IP: 0x%016X", frame->rip);
-    kPanic(buffer);
+    kPanic("PAGE FAULT", isr, frame);
 }
 
 extern "C" void Interrupt_DoubleFaultHandler(struct InterruptStack *frame, size_t isr)
@@ -87,6 +86,11 @@ extern "C" void Interrupt_Syscall(struct InterruptStack *frame, size_t isr)
     // Before completing dispatch, we need to re-save frame, as the syscall might have changed it.
     Process::Current()->SetProcessState(frame);
     ProcessDispatchEnd(frame);
+}
+
+extern "C" void Interrupt_AssertionFailed(struct InterruptStack *frame, size_t isr)
+{
+    kPanic("ASSERTION FAILED", isr, frame);
 }
 
 extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)

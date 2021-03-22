@@ -95,6 +95,7 @@ void kInitInterrupts()
     descriptors->SetInterruptHandler(Interrupt_KeyboardInput, 0x21);
     descriptors->SetInterruptHandler(Interrupt_Timer, 0x20);
     descriptors->SetInterruptHandler(Interrupt_Syscall, 0x80);
+    descriptors->SetInterruptHandler(Interrupt_AssertionFailed, 0x82);
     descriptors->Activate();
 }
 
