@@ -105,15 +105,11 @@ void kMain(KernelParameters *kernelParameters)
     auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
     {
         eventLoopProcess->Initialize((void *)KernelEventLoop);
-        eventLoopProcess->SaveFloatingPointState();
-        eventLoopProcess->RestoreFloatingPointState();
         Process::Add(eventLoopProcess);
     }
     {
         auto dumpProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
         dumpProcess->Initialize((void*)DumpThreadInfo);
-        dumpProcess->SaveFloatingPointState();
-        dumpProcess->RestoreFloatingPointState();
         Process::Add(dumpProcess);
     }
 
