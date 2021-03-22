@@ -12,9 +12,8 @@ SYSCALL(SYSCALL_EXIT, syscall, exitCode)
     currentProcess->State = ProcessState::Exited;
     currentProcess->ExitCode = exitCode;
     auto processList = *Process::GetProcessList();
-    for (auto item : processList)
+    for (auto process : processList)
     {
-        auto process = item.Value;
         if (process->GetProcessId() == 0)
         {
             process->Activate();

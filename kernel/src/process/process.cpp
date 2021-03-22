@@ -1,5 +1,8 @@
 #include <process/process.hpp>
 #include <memory/heap.hpp>
+#include <stdint.h>
+
+#define FPU_STATE_SIZE_BYTES 108
 
 Process *Process::current = NULL;
 Process *Process::next = NULL;
@@ -13,9 +16,9 @@ int64_t Process::NextId()
     while (didModifyId)
     {
         didModifyId = false;
-        for (auto linkedListEntry : processList)
+        for (auto process : processList)
         {
-            auto processId = linkedListEntry.Value->processId;
+            auto processId = process->processId;
             if (processId == nextId)
             {
                 didModifyId = true;
@@ -37,7 +40,10 @@ Process::Process(VirtualAddressManager *virtualAddressManager)
     this->processId = Process::NextId();
     this->interruptStack = InterruptStack();
     this->virtualAddressManager = virtualAddressManager;
-    this->FloatingPointState = calloc(108, 1);
+    this->FloatingPointState = malloc(FPU_STATE_SIZE_BYTES);
+    auto fpuState = (uint8_t*)this->FloatingPointState;
+    fpuState[0] = 234;
+    fpuState[1] = 2;
 }
 
 void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)

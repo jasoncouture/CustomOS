@@ -73,8 +73,8 @@ template <class T>
 struct LinkedListIterator
 {
     using value_type = LinkedListItem<T>;
-    using pointer = LinkedListItem<T> *;
-    using reference = LinkedListItem<T> &;
+    using pointer = T*;
+    using reference = T&;
 
 public:
     LinkedListIterator(value_type *next)
@@ -82,8 +82,8 @@ public:
         this->next = next;
     }
 
-    reference operator*() const { return *next; }
-    pointer operator->() { return next; }
+    reference operator*() const { return next->Value; }
+    pointer operator->() { return &(next->Value); }
 
     LinkedListIterator<T> &operator++()
     {
@@ -102,7 +102,7 @@ public:
     friend bool operator!=(const LinkedListIterator<T> &a, const LinkedListIterator<T> &b) { return a.next != b.next; }
 
 private:
-    pointer next;
+    value_type* next;
 };
 
 template <class T>

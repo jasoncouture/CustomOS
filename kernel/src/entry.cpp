@@ -87,13 +87,13 @@ void DumpThreadInfo()
         console->SetCursorPosition(0, 0);
         
         auto myId = Process::Current()->GetProcessId();
-        for (auto linkedListEntry : processes)
+        for (auto process : processes)
         {
-            if (linkedListEntry.Value->GetProcessId() != myId)
+            if (process->GetProcessId() != myId)
             {
-                linkedListEntry.Value->Activate();
+                process->Activate();
             }
-            printf("PID: %d, State: %d, Name: NOT SUPPORTED YET      \r\n", linkedListEntry.Value->GetProcessId(), linkedListEntry.Value->State);
+            printf("PID: %d, State: %d, Name: NOT SUPPORTED YET      \r\n", process->GetProcessId(), process->State);
         }
         asm("sti");
         asm("hlt");
@@ -127,9 +127,8 @@ void kMain(KernelParameters *kernelParameters)
     });
     eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
         auto processList = *Process::GetProcessList();
-        for (auto item : processList)
+        for (auto process : processList)
         {
-            auto process = item.Value;
             if (process->GetProcessId() == 0)
             {
                 process->Activate();
@@ -152,9 +151,8 @@ void kMain(KernelParameters *kernelParameters)
     {
         asm("cli");
         auto processList = *Process::GetProcessList();
-        for (auto item : processList)
+        for (auto process : processList)
         {
-            auto process = item.Value;
             if (process->GetProcessId() != 0)
             {
                 process->Activate();
