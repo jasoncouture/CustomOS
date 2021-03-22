@@ -41,7 +41,6 @@ iso: diskimage
 	@ cp $(FONT) $(BUILDDIR)/iso/
 	@ cp $(KERNEL) $(BUILDDIR)/iso/
 	@ mkisofs -e boot-image.bin -no-emul-boot -r -l -udf -o $(OSCDIMAGE) $(BUILDDIR)/iso/
-#	@ xorrisofs -r -J -o $(OSCDIMAGE) $(BUILDDIR)/iso/
 clean:
 	@ $(MAKE) -C gnu-efi clean
 	@ $(MAKE) -C kernel clean

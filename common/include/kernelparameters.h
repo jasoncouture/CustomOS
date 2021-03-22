@@ -27,4 +27,5 @@ struct KernelParameters
 	struct Font *Font;
 	struct BootMemoryMap *BootMemoryMap;
 	void *FirmwareRuntimeServices;
+	void *AcpiRootSystemDescriptorPointer;
 };
