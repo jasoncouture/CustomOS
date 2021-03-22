@@ -114,3 +114,5 @@ ISR_DEFINE	37, 0	; LPT2
 ISR_DEFINE	39, 0	; LPT1
 
 ISR_DEFINE  128, 0   ; Syscall
+ISR_DEFINE	129, 0	 ; Yield
+ISR_DEFINE	130, 0	 ; kernel assertion failed
