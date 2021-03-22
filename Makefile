@@ -10,7 +10,7 @@ OSIMAGETEMP = $(OSIMAGE).tmp
 KERNEL = kernel/bin/kernel.elf
 BOOTEFI = gnu-efi/x86_64/bootloader/main.efi
 
-all: diskimage
+all: iso
 
 bootloader:
 	@ $(MAKE) -C gnu-efi
