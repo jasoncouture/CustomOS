@@ -1,4 +1,6 @@
 #include <event/eventloop.hpp>
+#include <process/process.hpp>
+#include <interrupts/interrupts.hpp>
 
 using namespace Kernel::Events;
 using namespace Kernel::Collections;
@@ -19,15 +21,16 @@ void EventLoop::Run(void (*onEvent)(Event *))
 {
     while (true)
     {
-        asm("cli");
+        DisableInterrupts();
         Event *next;
         if (!this->eventQueue->TryDequeue(&next))
         {
-            asm("sti");
-            asm("hlt"); // Wait for an interrupt to wake us up.
+            EnableInterrupts();
+            Process::Yield();
+            //asm("hlt"); // Wait for an interrupt to wake us up.
             continue;
         }
-        asm("sti");
+        EnableInterrupts();
         
         if(onEvent != NULL)
             onEvent(next);

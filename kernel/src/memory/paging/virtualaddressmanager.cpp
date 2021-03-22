@@ -7,6 +7,7 @@
 #include <console/font.hpp>
 #include <console/cstr.hpp>
 #include <graphics/framebuffer.hpp>
+#include <panic.hpp>
 
 // Class members
 
@@ -80,6 +81,15 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress, boo
 {
     auto pageTableEntry = this->GetPageTableEntry(virtualAddress, true);
     memset(pageTableEntry, 0, sizeof(PageTableEntry));
+    auto phyiscalAddressInt = (uint64_t)physicalAddress;
+    if (phyiscalAddressInt % 4096)
+    {
+        kPanic("Physical address isn't page aligned!");
+    }
+    if ((uint64_t)virtualAddress % 4096)
+    {
+        kPanic("Virtual address isn't page aligned!");
+    }
     pageTableEntry->SetAddress((uint64_t)physicalAddress);
     pageTableEntry->SetFlag(PageTableEntryFlag::Writable, writable);
     pageTableEntry->SetFlag(PageTableEntryFlag::Present, true);

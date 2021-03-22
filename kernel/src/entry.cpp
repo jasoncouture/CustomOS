@@ -77,84 +77,54 @@ int KernelEventLoop()
     return 0;
 }
 
-void DumpThreadInfo()
-{
-    auto console = KernelConsole::GetInstance();
-    auto processes = *(Process::GetProcessList());
-    while (true)
-    {
-        asm("cli");
-        console->SetCursorPosition(0, 0);
-        
-        auto myId = Process::Current()->GetProcessId();
-        for (auto process : processes)
-        {
-            if (process->GetProcessId() != myId)
-            {
-                process->Activate();
-            }
-            printf("PID: %d, State: %d, Name: NOT SUPPORTED YET      \r\n", process->GetProcessId(), process->State);
-        }
-        asm("sti");
-        asm("hlt");
-    }
-}
-
 void kMain(KernelParameters *kernelParameters)
 {
-    auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
+    auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "EventLoop");
     {
         eventLoopProcess->Initialize((void *)KernelEventLoop);
         Process::Add(eventLoopProcess);
-    }
-    {
-        auto dumpProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
-        dumpProcess->Initialize((void*)DumpThreadInfo);
-        Process::Add(dumpProcess);
     }
 
     auto pageAllocator = PageAllocator::GetInstance();
     auto memory = Memory::GetInstance();
     auto bitmap = pageAllocator->GetBitmap();
-    //printf("Kernel booted. Starting event loop.\r\n");
+    printf("Kernel booted. Starting event loop.\r\n");
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
-        //printf("WARN: Keyboard buffer is full\r\n");
+        printf("WARN: Keyboard buffer is full\r\n");
     });
-    eventLoop->SetHandler(EventType::TimerTick, [](Event *event) {
+
+    uint64_t counter = 0;
+    while (true)
+    {
+        // Very, VERY simple scheduler.
+        auto console = KernelConsole::GetInstance();
         auto processList = *Process::GetProcessList();
+        bool didSchedule = false;
         for (auto process : processList)
         {
             if (process->GetProcessId() == 0)
             {
-                process->Activate();
-                break;
+                //printf("Skipping idle process (PID 0)\r\n");
+                continue;
             }
+            if (process->State != ProcessState::Ready)
+                continue;
+            didSchedule = true;
+            //printf("Scheduling process: %d (%s)\r\n", process->GetProcessId(), process->GetName());
+            process->Activate();
+            //double startTime = Kernel::Timer::GetInstance()->ElapsedTime();
+            Process::Yield();
+            //double timeTaken = Kernel::Timer::GetInstance()->ElapsedTime() - startTime;
+            //printf("Control Returned to scheduler after %f seconds.\r\n", timeTaken);
         }
-        //printf("T");
-    });
-
-    eventLoop->SetHandler(EventType::ContextSwitch, [](Event *event) {
-        //printf(".");
-    });
-    eventLoopProcess->Activate();
-    eventLoop->Publish(new Event(EventType::TimerTick, 0));
-    eventLoop->Publish(new Event(EventType::TimerTick, 1));
-    eventLoop->Publish(new Event(EventType::TimerTick, 2));
-    eventLoop->Publish(new Event(EventType::TimerTick, 3));
-    uint64_t counter = 0;
-    while (true)
-    {
-        asm("cli");
-        auto processList = *Process::GetProcessList();
-        for (auto process : processList)
+        if(!didSchedule)
         {
-            if (process->GetProcessId() != 0)
-            {
-                process->Activate();
-            }
+            //printf("Halting because no processes were scheduled. Will try again next interrupt.\r\n");
+            //double startTime = Kernel::Timer::GetInstance()->ElapsedTime();
+            asm("hlt");
+            //double timeTaken = Kernel::Timer::GetInstance()->ElapsedTime() - startTime;
+            //printf("Halted for %f seconds\r\n", timeTaken);
         }
-        asm("sti");
-        asm("hlt");
     }
 }

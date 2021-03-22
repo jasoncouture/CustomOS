@@ -5,6 +5,7 @@
 extern "C" void _putchar(char character)
 {
     KernelConsole::GetInstance()->PutCharacter(character);
+    KernelFrameBuffer::GetInstance()->Update();
 }
 
 KernelConsole *KernelConsole::GetInstance()

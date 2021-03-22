@@ -23,6 +23,9 @@ class KernelFrameBuffer
 {
     private:
         Lock *FrameBufferLock;
+        uint32_t* buffer;
+        uint32_t* shadowBuffer;
+        bool bufferDirty;
         KernelFrameBufferInfo* kFrameBufferInfo;
         static KernelFrameBuffer* GlobalSurface;
         void DirectWritePixel(uint64_t *buffer, uint64_t deviceColor);
@@ -33,10 +36,12 @@ class KernelFrameBuffer
         unsigned int GetHeight();
         void SetPixel(const unsigned int x, const unsigned int y, const unsigned int color);
         void Clear(const unsigned int color);
+        bool NeedsBufferSwap(bool fast = true);
+        void SwapBuffers();
+        void Update();
         static KernelFrameBuffer* GetInstance();
         static KernelFrameBuffer* InitializeInstance(FrameBuffer* frameBuffer);
 };
 
 
 void kInitializeFrameBuffer(FrameBuffer* frameBuffer);
-

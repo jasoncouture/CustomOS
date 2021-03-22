@@ -67,11 +67,11 @@ KernelFrameBuffer *KernelFrameBuffer::GetInstance()
     return KernelFrameBuffer::GlobalSurface;
 }
 
-uint64_t DeviceColorFromKernelColor (uint64_t kernelColor, KernelFrameBufferInfo *kernelFrameBufferInfo) 
+uint64_t DeviceColorFromKernelColor(uint64_t kernelColor, KernelFrameBufferInfo *kernelFrameBufferInfo)
 {
     uint64_t deviceColor = 0;
-    uint8_t* buffer = (uint8_t*)(void*)&deviceColor;
-    uint8_t* colorDataBuffer = (uint8_t*)(void*)&kernelColor;
+    uint8_t *buffer = (uint8_t *)(void *)&deviceColor;
+    uint8_t *colorDataBuffer = (uint8_t *)(void *)&kernelColor;
     buffer[kernelFrameBufferInfo->RedPosition / 8] = colorDataBuffer[0];
     buffer[kernelFrameBufferInfo->GreenPosition / 8] = colorDataBuffer[1];
     buffer[kernelFrameBufferInfo->BluePosition / 8] = colorDataBuffer[2];
@@ -80,15 +80,19 @@ uint64_t DeviceColorFromKernelColor (uint64_t kernelColor, KernelFrameBufferInfo
 
 void KernelFrameBuffer::DirectWritePixel(uint64_t *buffer, uint64_t deviceColor)
 {
-    *buffer = deviceColor;
+    *(uint32_t *)buffer = (uint32_t)deviceColor;
 }
-
-
 
 KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
 {
-    this->kFrameBufferInfo = (KernelFrameBufferInfo*)malloc(sizeof(KernelFrameBufferInfo));
+
+    this->kFrameBufferInfo = (KernelFrameBufferInfo *)malloc(sizeof(KernelFrameBufferInfo));
     InitializeKernelFrameBuffer(frameBuffer, this->kFrameBufferInfo);
+    this->buffer = (uint32_t *)malloc(frameBuffer->Size);
+    this->shadowBuffer = (uint32_t *)malloc(frameBuffer->Size);
+    this->bufferDirty = false;
+    memcopy(frameBuffer->BaseAddress, this->buffer, frameBuffer->Size);
+    memcopy(this->buffer, this->shadowBuffer, frameBuffer->Size);
 }
 
 void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, const unsigned int color)
@@ -105,9 +109,43 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     // If we'd go out of the framebuffer bounds, don't.
     if (frameBufferOffset + this->kFrameBufferInfo->BytesPerPixel >= frameBuffer->Size)
         return;
-    uint64_t *buffer = (uint64_t *)((uint8_t*)frameBuffer->BaseAddress + frameBufferOffset);
-    uint64_t deviceColor =  DeviceColorFromKernelColor(color, this->kFrameBufferInfo);
+    uint64_t *buffer = (uint64_t *)((uint8_t *)this->buffer + frameBufferOffset);
+    uint64_t deviceColor = DeviceColorFromKernelColor(color, this->kFrameBufferInfo);
     this->DirectWritePixel(buffer, deviceColor);
+}
+
+void KernelFrameBuffer::Update()
+{
+    this->bufferDirty = true;
+}
+
+bool KernelFrameBuffer::NeedsBufferSwap(bool fast)
+{
+    if (this->bufferDirty)
+        return this->bufferDirty;
+    if (fast)
+        return false;
+    for (uint64_t x = 0; x < kFrameBufferInfo->FrameBuffer->Size / 4; x++)
+    {
+        if (this->buffer[x] != this->shadowBuffer[x])
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void KernelFrameBuffer::SwapBuffers()
+{
+    uint32_t *displayMemory = (uint32_t *)kFrameBufferInfo->FrameBuffer->BaseAddress;
+    for (uint64_t x = 0; x < kFrameBufferInfo->FrameBuffer->Size / 4; x++)
+    {
+        if (this->buffer[x] != this->shadowBuffer[x])
+        {
+            displayMemory[x] = shadowBuffer[x] = buffer[x];
+        }
+    }
+    this->bufferDirty = false;
 }
 
 void KernelFrameBuffer::Clear(const unsigned int color)

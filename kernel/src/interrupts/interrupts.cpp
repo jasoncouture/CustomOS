@@ -12,6 +12,7 @@
 #include <process/process.hpp>
 #include <console/console.hpp>
 #include <syscall/syscall.hpp>
+#include <collections/linkedlist.hpp>
 
 #define BLUE 0x00FF0000
 #define WHITE 0x00FFFFFF
@@ -19,6 +20,8 @@
 Process *ProcessDispatchStart(InterruptStack *frame)
 {
     auto currentProcess = Process::Current();
+    if (currentProcess == NULL)
+        return NULL;
     currentProcess->SetProcessState(frame);
     currentProcess->SaveFloatingPointState();
     if (currentProcess->State == ProcessState::Running)
@@ -32,14 +35,20 @@ Process *ProcessDispatchEnd(InterruptStack *frame)
     auto nextProcess = Process::Next();
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     nextProcess->State = ProcessState::Running;
-    if (nextProcess->GetProcessId() != currentProcess->GetProcessId())
+    eventLoop->Publish(new Event(EventType::ContextSwitch));
+    nextProcess->RestoreFloatingPointState();
+    nextProcess->RestoreProcessState(frame);
+    nextProcess->Activated();
+    nextProcess->State = ProcessState::Running;
+    auto processList = *Process::GetProcessList();
+    for (auto process : processList)
     {
-        eventLoop->Publish(new Event(EventType::ContextSwitch));
-        nextProcess->RestoreFloatingPointState();
-        nextProcess->RestoreProcessState(frame);
-        nextProcess->Activated();
-        nextProcess->State = ProcessState::Running;
+        if (process->GetProcessId() != 0)
+            continue;
+        process->Activate();
+        break;
     }
+
     return nextProcess;
 }
 
@@ -62,7 +71,7 @@ extern "C" void Interrupt_DoubleFaultHandler(struct InterruptStack *frame, size_
 
 extern "C" void Interrupt_GeneralProtectionFault(struct InterruptStack *frame, size_t isr)
 {
-    kPanic("A general protection fault has occurred!");
+    kPanic("General Protection Fault", isr, frame);
 }
 
 extern "C" void Interrupt_KeyboardInput(struct InterruptStack *frame, size_t isr)
@@ -86,6 +95,11 @@ extern "C" void Interrupt_Syscall(struct InterruptStack *frame, size_t isr)
     // Before completing dispatch, we need to re-save frame, as the syscall might have changed it.
     Process::Current()->SetProcessState(frame);
     ProcessDispatchEnd(frame);
+}
+
+extern "C" void Interrupt_Yield(struct InterruptStack *frame, size_t isr)
+{
+    ProcessDispatch(frame);
 }
 
 extern "C" void Interrupt_AssertionFailed(struct InterruptStack *frame, size_t isr)

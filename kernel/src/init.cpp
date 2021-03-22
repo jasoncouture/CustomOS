@@ -3,6 +3,7 @@
 #include <init.hpp>
 #include <graphics/framebuffer.hpp>
 #include <console/font.hpp>
+#include <console/console.hpp>
 #include <memory/memory.hpp>
 #include <memory/pageallocator.hpp>
 #include <console/cstr.hpp>
@@ -14,10 +15,12 @@
 #include <memory/heap.hpp>
 #include <interrupts/interruptdescriptortable.hpp>
 #include <process/process.hpp>
+#include <debug.hpp>
+#include <timer/timer.hpp>
 
 void kInitGlobalDesciptorTable()
 {
-    auto globalDescriptorLocation = (GlobalDescriptorLocation*)kmalloc(sizeof(GlobalDescriptorLocation));
+    auto globalDescriptorLocation = (GlobalDescriptorLocation *)kmalloc(sizeof(GlobalDescriptorLocation));
     globalDescriptorLocation->Size = (uint16_t)(sizeof(GlobalDesciptorTable)) - 1;
     globalDescriptorLocation->GlobalDescriptorTable = &DefaultGlobalDesciptorTable;
     LoadGlobalDescriptorTable(globalDescriptorLocation);
@@ -33,7 +36,7 @@ void *PageToAddress(uint64_t page, uint64_t pageSize)
     return (void *)(page * pageSize);
 }
 
-void kInitPageManager(FrameBuffer *frameBuffer) 
+void kInitPageManager(FrameBuffer *frameBuffer)
 {
     auto memory = Memory::GetInstance();
     auto pageAllocator = PageAllocator::Initialize(memory);
@@ -42,14 +45,14 @@ void kInitPageManager(FrameBuffer *frameBuffer)
     // Move the framebuffer from "used" (if it was there) to "reserved" memory
     pageAllocator->FreePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
     pageAllocator->ReservePages(frameBuffer->BaseAddress, (frameBuffer->Size / pageAllocator->PageSize()));
-    pageAllocator->ReservePages((void*)0, 4096); // Reserve the first 1MB of ram, it seems EFI doesn't report this in the memory map, but when we write to
+    pageAllocator->ReservePages((void *)0, 4096); // Reserve the first 1MB of ram, it seems EFI doesn't report this in the memory map, but when we write to
 }
 
 void kInitVirtualMemory(FrameBuffer *frameBuffer)
 {
     auto memory = Memory::GetInstance();
     // Setup the virtual memory manager.
-    
+
     uint64_t pageSize = memory->PageSize();
     uint64_t memorySize = memory->Size();
     uint64_t memoryPageSize = memorySize / pageSize;
@@ -62,7 +65,7 @@ void kInitVirtualMemory(FrameBuffer *frameBuffer)
 
     if (memorySize % pageSize)
         memoryPageSize++;
-    auto virtualAddressManager = VirtualAddressManager::GetKernelVirtualAddressManager();   
+    auto virtualAddressManager = VirtualAddressManager::GetKernelVirtualAddressManager();
     // Frame buffer might lie outside of memory space, so make sure it's mapped into virtual memory.
     for (page = 0; page < frameBufferPageCount; page++)
         virtualAddressManager->Map(PageToAddress(page + frameBufferStart, pageSize));
@@ -88,18 +91,19 @@ void kInitConsoleFont(Font *font)
 void kInitInterrupts()
 {
     auto descriptors = Kernel::Interrupts::InterruptDescriptors::GetInstance();
-    
+
     descriptors->SetInterruptHandler(Interrupt_DoubleFaultHandler, 0x08);
     descriptors->SetInterruptHandler(Interrupt_GeneralProtectionFault, 0x0D);
     descriptors->SetInterruptHandler(Interrupt_PageFaultHandler, 0xE);
     descriptors->SetInterruptHandler(Interrupt_KeyboardInput, 0x21);
     descriptors->SetInterruptHandler(Interrupt_Timer, 0x20);
     descriptors->SetInterruptHandler(Interrupt_Syscall, 0x80);
+    descriptors->SetInterruptHandler(Interrupt_Yield, 0x81);
     descriptors->SetInterruptHandler(Interrupt_AssertionFailed, 0x82);
     descriptors->Activate();
 }
 
-void kInitApic() 
+void kInitApic()
 {
     InitPorts();
     InitApic();
@@ -108,21 +112,52 @@ void kInitApic()
     PIC2DataPort->Write(0b11111111);
 }
 
-void kInitHeap() 
+void kInitHeap()
 {
     InitializeHeap(VirtualAddressManager::GetKernelVirtualAddressManager(), PageAllocator::GetInstance());
 }
 
-void kInitKernelProcess() 
+void kInitKernelProcess(KernelParameters *kernelParameters)
 {
-    auto kernelProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager());
-    kernelProcess->Activate();
-    kernelProcess->Activated();
+    auto kernelProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "Idle");
+    kernelProcess->Initialize((void *)kMain);
+    // Set RDI (the first argument to the function), to the kernel parameters pointer address.
+    auto stackFrame = kernelProcess->GetInterruptStack();
+    stackFrame.rdi = (uint64_t)kernelParameters;
+    kernelProcess->SetInterruptStack(stackFrame);
+    kernelProcess->Activate(); // We do this here to set the next process.
+    // We no longer set the current process with Activated so that the boot stack gets tossed out.
     kernelProcess->State = ProcessState::Running;
     Process::Add(kernelProcess);
 }
 
-void kInit(KernelParameters *kernelParameters)
+void SwapBuffers()
+{
+    auto frameBuffer = KernelFrameBuffer::GetInstance();
+    while (true)
+    {
+        if (frameBuffer->NeedsBufferSwap())
+        {
+            DisableInterrupts();
+            if (frameBuffer->NeedsBufferSwap(false))
+            {
+                frameBuffer->SwapBuffers();
+            }
+            EnableInterrupts();
+        }
+        Process::Yield();
+    }
+}
+
+void kInitDoubleBufferProcess(KernelParameters *kernelParameters)
+{
+    auto frameBufferProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "FrameBuffer");
+    frameBufferProcess->Initialize((void *)SwapBuffers, 16384);
+    frameBufferProcess->State = ProcessState::Ready;
+    Process::Add(frameBufferProcess);
+}
+
+extern "C" void __entry(KernelParameters *kernelParameters)
 {
     DisableInterrupts();
     kInitGlobalDesciptorTable();
@@ -132,14 +167,15 @@ void kInit(KernelParameters *kernelParameters)
     kInitHeap();
     kInitInterrupts();
     kInitApic();
-    kInitKernelProcess();
-    EnableInterrupts();
     kInitFrameBuffer(kernelParameters->FrameBuffer);
     kInitConsoleFont(kernelParameters->Font);
-}
-
-extern "C" void __entry(KernelParameters *kernelParameters)
-{
-    kInit(kernelParameters);
-    kMain(kernelParameters);
+    KernelConsole::GetInstance()->SetColor(0xFFFFFFFFU, 0);
+    KernelConsole::GetInstance()->Clear();
+    kInitKernelProcess(kernelParameters);
+    kInitDoubleBufferProcess(kernelParameters);
+    Kernel::Timer::GetInstance()->SetDivisor(100);
+    EnableInterrupts();
+    Process::Yield();
+    // We should never reach here, because we've abandoned this process.
+    ASSERT(0);
 }

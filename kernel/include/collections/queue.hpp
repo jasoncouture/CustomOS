@@ -81,7 +81,7 @@ namespace Kernel::Collections
     template <class T>
     bool Queue<T>::TryDequeue(T *item)
     {
-        this->lock->SpinWait();
+        if(!this->lock->TryAcquire()) return false;
         bool returnValue = this->ringBuffer->TryRead(item);
         this->lock->Unlock();
         return returnValue;

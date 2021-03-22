@@ -33,9 +33,13 @@ extern "C"
 class Process
 {
 public:
-    Process();
-    Process(VirtualAddressManager *);
+    Process(const char* name = NULL);
+    Process(VirtualAddressManager *, const char* name = NULL);
     int64_t GetProcessId() { return this->processId; }
+    static void Yield()
+    {
+        asm volatile("int $0x81");
+    }
     static Process *Current() { return Process::current; }
     static Process *Next() { return Process::next; }
     static int64_t NextId();
@@ -63,10 +67,11 @@ public:
     void Finalize();
     void Reap();
     InterruptStack GetInterruptStack();
+    void SetInterruptStack(InterruptStack interruptStack);
     ProcessState State;
     void *FloatingPointState;
     void *Stack;
-
+    const char* GetName() const { return this->name == NULL ? "" : this->name; }
     uint64_t ExitCode;
 
 private:
@@ -74,6 +79,7 @@ private:
     static Process *current;
     static Process *next;
     static LinkedList<Process *> *processes;
+    const char* name;
     void *StackBase;
     VirtualAddressManager *virtualAddressManager;
     int64_t processId;

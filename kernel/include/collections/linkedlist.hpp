@@ -15,6 +15,8 @@ public:
     LinkedListItem(T value)
     {
         Value = value;
+        next = NULL;
+        previous = NULL;
     }
     T Value;
 
@@ -114,6 +116,7 @@ public:
         if (head == NULL)
         {
             tail = head = new LinkedListItem<T>(item);
+            return;
         }
         tail->InsertAfter(item);
         tail = tail->Next();

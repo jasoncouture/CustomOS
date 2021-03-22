@@ -10,5 +10,5 @@ class Lock {
     void Unlock();
 
     private:
-    uint64_t LockCookie;
+    volatile uint64_t LockCookie;
 };

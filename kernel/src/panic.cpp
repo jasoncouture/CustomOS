@@ -52,7 +52,7 @@ void kPanic(const char *message, size_t isr, InterruptStack *interruptFrame)
     frameBuffer->Clear(BLUE);
     WritePanicString(frameBuffer, consoleFont, panicMessage, 0);
     WritePanicString(frameBuffer, consoleFont, "Debug Info", 1);
-    snprintf(panicMessage, 8191, "CR2: %016llx, RIP: %016llx", cr2_state, interruptFrame->rip);
+    snprintf(panicMessage, 8191, "CR2: %016llx, RIP: %016llx, Error Code: %d", cr2_state, interruptFrame->rip, interruptFrame->error_code);
     WritePanicString(frameBuffer, consoleFont, panicMessage, 2);
     __HALT();
 }

@@ -30,20 +30,25 @@ int64_t Process::NextId()
     return nextId;
 }
 
-Process::Process() : Process(new VirtualAddressManager())
+Process::Process(const char *name) : Process(new VirtualAddressManager(), name)
 {
 }
 
-Process::Process(VirtualAddressManager *virtualAddressManager)
+Process::Process(VirtualAddressManager *virtualAddressManager, const char *name)
 {
 
     this->processId = Process::NextId();
     this->interruptStack = InterruptStack();
     this->virtualAddressManager = virtualAddressManager;
     this->FloatingPointState = malloc(FPU_STATE_SIZE_BYTES);
-    auto fpuState = (uint8_t*)this->FloatingPointState;
+    auto fpuState = (uint8_t *)this->FloatingPointState;
     fpuState[0] = 234;
     fpuState[1] = 2;
+    this->name = "";
+    if (name != NULL)
+    {
+        this->name = name;
+    }
 }
 
 void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)
@@ -53,7 +58,7 @@ void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)
     initialFrame.ss = 0x10;
     initialFrame.cs = 0x08;
     initialFrame.rip = (uint64_t)(void *)ProcessStartTrampoline;
-    initialFrame.rdi = (uint64_t)entrypoint;
+    initialFrame.rax = (uint64_t)entrypoint;
     initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + stackSize);
     initialFrame.rsp = initialFrame.rbp;
     initialFrame.cr3 = (uint64_t)this->virtualAddressManager->GetPageTableAddress();
@@ -64,6 +69,11 @@ void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)
 InterruptStack Process::GetInterruptStack()
 {
     return this->interruptStack;
+}
+
+void Process::SetInterruptStack(InterruptStack interruptStack)
+{
+    this->interruptStack = interruptStack;
 }
 
 void Process::SetProcessState(InterruptStack *current)
