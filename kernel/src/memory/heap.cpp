@@ -100,7 +100,7 @@ void ExpandHeap(size_t size)
         // otherwise we can just update the size of the last segment :)
         lastSegment->Length = lastSegment->Length + size;
     }
-    heapEnd = currentHeapEnd + sizeInPages;
+    heapEnd = currentHeapEnd + (sizeInPages*pageAllocator->PageSize());
 }
 
 size_t GetEarlyHeapSize()
