@@ -2,11 +2,13 @@
 #include <memory/heap.hpp>
 #include <stdint.h>
 
-#define FPU_STATE_SIZE_BYTES 108
+
 
 Process *Process::current = NULL;
 Process *Process::next = NULL;
+Process *Process::idle = NULL;
 LinkedList<Process *> *Process::processes = NULL;
+
 
 int64_t Process::NextId()
 {
@@ -40,10 +42,9 @@ Process::Process(VirtualAddressManager *virtualAddressManager, const char *name)
     this->processId = Process::NextId();
     this->interruptStack = InterruptStack();
     this->virtualAddressManager = virtualAddressManager;
-    this->FloatingPointState = malloc(FPU_STATE_SIZE_BYTES);
-    auto fpuState = (uint8_t *)this->FloatingPointState;
-    fpuState[0] = 234;
-    fpuState[1] = 2;
+    auto offset = ((uint64_t)this->FloatingPointStateBase) % 16;
+    this->FloatingPointState = (void *)(this->FloatingPointStateBase + offset);
+    this->State = ProcessState::Created;
     this->name = "";
     if (name != NULL)
     {
@@ -53,13 +54,13 @@ Process::Process(VirtualAddressManager *virtualAddressManager, const char *name)
 
 void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)
 {
-    this->StackBase = this->Stack = calloc(stackSize, 1);
+    
     InterruptStack initialFrame = this->interruptStack;
     initialFrame.ss = 0x10;
     initialFrame.cs = 0x08;
     initialFrame.rip = (uint64_t)(void *)ProcessStartTrampoline;
     initialFrame.rax = (uint64_t)entrypoint;
-    initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + stackSize);
+    initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + DEFAULT_STACK_SIZE);
     initialFrame.rsp = initialFrame.rbp;
     initialFrame.cr3 = (uint64_t)this->virtualAddressManager->GetPageTableAddress();
     initialFrame.rflags = flags;
@@ -102,6 +103,7 @@ void Process::RestoreFloatingPointState()
 void Process::Activated()
 {
     Process::current = Process::next;
+    Process::next = Process::idle;
 }
 
 void Process::Activate()

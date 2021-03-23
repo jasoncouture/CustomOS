@@ -8,10 +8,10 @@ CC = gcc
 ASMC = nasm
 LD = ld
 
-CFLAGS = -ffreestanding -fshort-wchar -fno-inline -fno-exceptions
+CFLAGS = -ffreestanding -fshort-wchar -fno-inline -fno-exceptions -mno-red-zone -mgeneral-regs-only
 CFLAGS += -fstack-protector-strong -fno-unwind-tables -g -Wno-address-of-packed-member
 CFLAGS += -Wundef -Wcast-qual -Wwrite-strings -Wimplicit-fallthrough -Wno-nonnull-compare 
-CFLAGS += -Wno-expansion-to-defined -I../common/include -Iinclude
+CFLAGS += -Wno-expansion-to-defined -I../common/include -Iinclude -DPRINTF_INCLUDE_CONFIG_H
 CXXFLAGS = $(CFLAGS)
 CXXFLAGS += -Wno-deprecated-copy -fno-rtti
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib --no-dynamic-linker
@@ -54,8 +54,8 @@ build: $(OBJS)
 $(OBJDIR)/interrupts/interrupts.o: $(SRCDIR)/interrupts/interrupts.cpp
 	@ echo === COMPILING $<
 	@ mkdir -p $(@D)
-	@ $(CC) -mno-red-zone -mgeneral-regs-only $(CXXFLAGS) -c $< -o $@
-	@ $(CC) -mno-red-zone -mgeneral-regs-only $(CXXFLAGS) $< -MT $@ $(DEPFLAGS) $@.d
+	@ $(CC) $(CXXFLAGS) -c $< -o $@
+	@ $(CC) $(CXXFLAGS) $< -MT $@ $(DEPFLAGS) $@.d
 
 $(OBJDIR)/%_asm.o: $(SRCDIR)/%.asm
 	@ echo === ASSEMBLING $<

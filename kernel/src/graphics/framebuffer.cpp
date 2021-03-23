@@ -1,6 +1,8 @@
 #include <graphics/framebuffer.hpp>
 #include <stddef.h>
 #include <memory/heap.hpp>
+#include <interrupts/interrupts.hpp>
+
 #define PIXEL_FORMAT_RGB_RESERVED_8BIT_PER_COLOR 0
 #define PIXEL_FORMAT_BGR_RESERVED_8BIT_PER_COLOR 1
 #define PIXEL_BIT_MASK 2
@@ -91,6 +93,7 @@ KernelFrameBuffer::KernelFrameBuffer(FrameBuffer *frameBuffer)
     this->buffer = (uint32_t *)malloc(frameBuffer->Size);
     this->shadowBuffer = (uint32_t *)malloc(frameBuffer->Size);
     this->bufferDirty = false;
+    this->FrameBufferLock = new Lock();
     memcopy(frameBuffer->BaseAddress, this->buffer, frameBuffer->Size);
     memcopy(this->buffer, this->shadowBuffer, frameBuffer->Size);
 }
@@ -109,9 +112,16 @@ void KernelFrameBuffer::SetPixel(const unsigned int x, const unsigned int y, con
     // If we'd go out of the framebuffer bounds, don't.
     if (frameBufferOffset + this->kFrameBufferInfo->BytesPerPixel >= frameBuffer->Size)
         return;
+    auto interruptStatus = InterruptStatus();
+    if (interruptStatus)
+        DisableInterrupts();
+    FrameBufferLock->SpinWait(false);
     uint64_t *buffer = (uint64_t *)((uint8_t *)this->buffer + frameBufferOffset);
     uint64_t deviceColor = DeviceColorFromKernelColor(color, this->kFrameBufferInfo);
     this->DirectWritePixel(buffer, deviceColor);
+    if (interruptStatus)
+        EnableInterrupts();
+    FrameBufferLock->Unlock();
 }
 
 void KernelFrameBuffer::Update()
@@ -121,30 +131,21 @@ void KernelFrameBuffer::Update()
 
 bool KernelFrameBuffer::NeedsBufferSwap(bool fast)
 {
-    if (this->bufferDirty)
-        return this->bufferDirty;
-    if (fast)
-        return false;
-    for (uint64_t x = 0; x < kFrameBufferInfo->FrameBuffer->Size / 4; x++)
-    {
-        if (this->buffer[x] != this->shadowBuffer[x])
-        {
-            return true;
-        }
-    }
-    return false;
+    return this->bufferDirty;
 }
 
 void KernelFrameBuffer::SwapBuffers()
 {
-    uint32_t *displayMemory = (uint32_t *)kFrameBufferInfo->FrameBuffer->BaseAddress;
-    for (uint64_t x = 0; x < kFrameBufferInfo->FrameBuffer->Size / 4; x++)
-    {
-        if (this->buffer[x] != this->shadowBuffer[x])
-        {
-            displayMemory[x] = shadowBuffer[x] = buffer[x];
-        }
-    }
+    auto temp = this->buffer;
+    auto size = this->kFrameBufferInfo->FrameBuffer->PixelsPerScanLine * this->kFrameBufferInfo->BytesPerPixel * this->kFrameBufferInfo->FrameBuffer->Height;
+    DisableInterrupts();
+    // Update the shadow buffer inside a lock, with interrupts disabled.
+    this->FrameBufferLock->SpinWait();
+    memcopy8(this->buffer, this->shadowBuffer, size);
+    this->FrameBufferLock->Unlock();
+    EnableInterrupts();
+    // Re-enable interrupts before writing to the framebuffer.
+    memcopy32(this->shadowBuffer, this->kFrameBufferInfo->FrameBuffer->BaseAddress, size - sizeof(uint32_t));
     this->bufferDirty = false;
 }
 

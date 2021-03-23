@@ -10,8 +10,9 @@ extern "C"
     void Interrupt_Syscall(struct InterruptStack *frame, size_t isr);
     void Interrupt_Yield(struct InterruptStack *frame, size_t isr);
     void Interrupt_AssertionFailed(struct InterruptStack *frame, size_t isr);
+
+    void DisableInterrupts();
+
+    void EnableInterrupts();
+    bool InterruptStatus();
 }
-
-void DisableInterrupts();
-
-void EnableInterrupts();

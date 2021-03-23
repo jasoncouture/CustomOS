@@ -39,9 +39,13 @@ EXTERN InterruptHandlers
 	push	rax
 	mov		rax, cr3
 	push 	rax
+	mov		rax, cr2
+	push	rax
 %endmacro
 
 %macro	POP_REG		0
+	pop rax
+	mov cr2, rax
 	pop rax
 	mov cr3, rax
 	pop	rax

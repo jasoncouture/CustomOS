@@ -50,7 +50,7 @@ PageAllocator::PageAllocator(Memory *memory)
 
     uint64_t selectedEntryPageCount = 0;
     BootMemoryDescriptor *selectedEntryDescriptor = NULL;
-    for (uint64_t i = 0; i < entries; i++)
+    for (uint64_t i = entries; i > 0; --i)
     {
         BootMemoryDescriptor *descriptor = (BootMemoryDescriptor *)((uint64_t)bootMemoryMap->MemoryMap + (i * bootMemoryMap->MemoryMapDescriptorSize));
         if (descriptor->Type != MDT_EFI_CONVENTIONAL_MEMORY_TYPE)
@@ -59,14 +59,13 @@ PageAllocator::PageAllocator(Memory *memory)
         if (
             descriptor->PageCount > bitmapPageSize &&
             (selectedEntryPageCount < bitmapPageSize ||       // If the selected page count is too small for our bitmap (IE we haven't found a spot yet)
-             descriptor->PageCount < selectedEntryPageCount)) // or the current descriptor is smaller than the currently selected one
+             descriptor->PageCount > selectedEntryPageCount)) // or the current descriptor is smaller than the currently selected one
         {
             // Select this descriptor as the location for our page bitmap.
             selectedEntryDescriptor = descriptor;
             selectedEntryPageCount = descriptor->PageCount;
         }
     }
-    auto consoleFont = KernelConsoleFont::GetInstance();
     uint8_t *bitmapBuffer = (uint8_t *)selectedEntryDescriptor->PhysicalAddress;
     memset(bitmapBuffer, 0x00, bitmapSize);
     this->bitmap = new Bitmap(bitmapBuffer, bitmapSize);

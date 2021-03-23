@@ -4,7 +4,9 @@
 #include <memory/heap.hpp>
 #include <memory/paging/virtualaddressmanager.hpp>
 #include <memory/pageallocator.hpp>
+#include <interrupts/interrupts.hpp>
 #include <debug.hpp>
+#include <console/printf.hpp>
 
 #define EARLY_HEAP_SIZE 0x10000
 #define MINIMUM_ALLOCATION_UNIT 24
@@ -14,7 +16,7 @@ HeapSegment *heapHead = NULL;
 void *heapEnd = NULL;
 __attribute__((aligned(0x1000)))
 uint8_t heap[EARLY_HEAP_SIZE];
-
+HeapSegment *earliestKnownFreeEntry = NULL;
 bool canExpandHeap = false;
 
 void InitializeHeap(VirtualAddressManager *virtualAddressManager, PageAllocator *pageAllocator)
@@ -34,22 +36,24 @@ void InitializeHeap(VirtualAddressManager *virtualAddressManager, PageAllocator 
         virtualAddressManager->Map((void *)(HEAP_VIRTUAL_ADDRESS_BASE + pageOffset), (heapBaseStart + pageOffset));
     }
     // Redirect our heap to it's new home.
-    
+
     heapHead = (HeapSegment *)HEAP_VIRTUAL_ADDRESS_BASE;
     heapEnd = (void *)(HEAP_VIRTUAL_ADDRESS_BASE + EARLY_HEAP_SIZE);
 
     auto current = heapHead;
 
     // Fix all the pointers in the current heap.
-    while(current != NULL) {
-        if(current->Next != NULL) {
-            current->Next = (HeapSegment*)((uint8_t*)current + sizeof(HeapSegment)+current->Length);
+    while (current != NULL)
+    {
+        if (current->Next != NULL)
+        {
+            current->Next = (HeapSegment *)((uint8_t *)current + sizeof(HeapSegment) + current->Length);
             current->Next->Previous = current;
         }
         // We don't have to worry about Previous, because Previous is fixed by Next.
         current = current->Next;
     }
-
+    earliestKnownFreeEntry = NULL;
     canExpandHeap = true;
 }
 
@@ -62,9 +66,10 @@ void ExpandHeap(size_t size)
     // Get the last segment.
     while (lastSegment->Next != NULL)
         lastSegment = lastSegment->Next;
-    if(lastSegment->GetFlag(HeapSegmentFlag::IsFree))
+    if (lastSegment->GetFlag(HeapSegmentFlag::IsFree))
         size -= lastSegment->Length + sizeof(HeapSegment);
-    if(size < (pageAllocator->PageSize() * 4)) size = pageAllocator->PageSize() * 4;
+    if (size < (pageAllocator->PageSize() * 4))
+        size = pageAllocator->PageSize() * 4;
 
     if (size % pageAllocator->PageSize())
     {
@@ -72,17 +77,19 @@ void ExpandHeap(size_t size)
         size += pageAllocator->PageSize();
     }
 
-    
-
     auto sizeInPages = size / pageAllocator->PageSize();
+    if (sizeInPages < 256)
+    {
+        sizeInPages = 256;
+    }
     uint8_t *currentHeapEnd = (uint8_t *)heapEnd;
     for (uint64_t x = 0; x < sizeInPages; x++)
     {
         // Grow the heap, one page at a time, mapping it onto the end of our current heap.
         virtualAddressManager->Map(currentHeapEnd + (x * pageAllocator->PageSize()), pageAllocator->AllocatePage(false));
     }
-    virtualAddressManager->Activate();
-    
+    //virtualAddressManager->Activate();
+
     // If the last segment isn't free, create a new segment at the end.
     if (!lastSegment->GetFlag(HeapSegmentFlag::IsFree))
     {
@@ -100,7 +107,7 @@ void ExpandHeap(size_t size)
         // otherwise we can just update the size of the last segment :)
         lastSegment->Length = lastSegment->Length + size;
     }
-    heapEnd = currentHeapEnd + (sizeInPages*pageAllocator->PageSize());
+    heapEnd = currentHeapEnd + (sizeInPages * pageAllocator->PageSize());
 }
 
 size_t GetEarlyHeapSize()
@@ -182,7 +189,7 @@ void InitEarlyHeap()
 
 void *HeapSegment::Address()
 {
-    return (void *)(this+1);
+    return (void *)(this + 1);
 }
 
 HeapSegment *HeapSegment::Split(size_t size)
@@ -224,33 +231,69 @@ void *malloc(size_t size)
     {
         InitEarlyHeap();
     }
-
-    HeapSegment *current = heapHead;
+    bool interruptState = InterruptStatus();
+    if (interruptState)
+        DisableInterrupts();
+    HeapSegment *current = earliestKnownFreeEntry == NULL ? heapHead : earliestKnownFreeEntry;
     while (current != NULL)
     {
+        void *selected = NULL;
         if (current->GetFlag(HeapSegmentFlag::IsFree))
         {
+            if (current->Next != NULL && current->Next->GetFlag(HeapSegmentFlag::IsFree))
+            {
+                current->CombineWithNext();
+            }
+            if (current->GetFlag(HeapSegmentFlag::IsFree))
+            {
+                if (earliestKnownFreeEntry == NULL)
+                {
+                    earliestKnownFreeEntry = current;
+                }
+                if (!earliestKnownFreeEntry->GetFlag(HeapSegmentFlag::IsFree))
+                {
+                    earliestKnownFreeEntry = current;
+                }
+            }
             if (current->Length > size)
             {
-                auto target = current->Split(size);
-                target->ClearFlag(HeapSegmentFlag::IsFree);
-                return target->Address();
+                current = current->Split(size);
+                current->ClearFlag(HeapSegmentFlag::IsFree);
+                //printf("MALLOC(%d) -> %p (%d)             \r\n", size, current->Address(), current->Length);
+                selected = current->Address();
             }
             else if (current->Length == size)
             {
                 current->ClearFlag(HeapSegmentFlag::IsFree);
-                return current->Address();
+                //printf("MALLOC(%d) -> %p (%d)              \r\n", size, current->Address(), current->Length);
+                selected = current->Address();
             }
         }
-
+        if (selected != NULL)
+        {
+            earliestKnownFreeEntry = current->Next == NULL ? current : current->Next;
+            return selected;
+        }
         current = current->Next;
     }
 
     if (!canExpandHeap)
+    {
+        if (interruptState)
+        {
+            EnableInterrupts();
+        }
         return NULL;
+    }
+
     // We need more heap space!
     ExpandHeap(size);
-    return malloc(size);
+    auto ret = malloc(size);
+    if (interruptState)
+    {
+        EnableInterrupts();
+    }
+    return ret;
 }
 
 void *kmalloc(size_t size) { return malloc(size); }
@@ -276,21 +319,28 @@ void *realloc(void *pointer, size_t size)
 
 void free(void *address)
 {
+    auto interruptState = InterruptStatus();
     auto segment = (HeapSegment *)((uint8_t *)address - sizeof(HeapSegment));
     if (!segment->GetFlag(HeapSegmentFlag::Valid))
         return;
     if (segment->GetFlag(HeapSegmentFlag::IsFree))
         return;
-
+    if (interruptState)
+        DisableInterrupts();
+    //printf("FREE(%p) -> %d          \r\n", address, segment->Length);
     segment->SetFlag(HeapSegmentFlag::IsFree);
-    segment->CombineWithNext();
-    segment->CombineWithPrevious();
+    if (((uint64_t)earliestKnownFreeEntry) > (uint64_t)segment)
+    {
+        earliestKnownFreeEntry = segment;
+    }
+    if (interruptState)
+        EnableInterrupts();
 }
 
 void *calloc(size_t count, size_t size)
 {
     auto pointer = malloc(count * size);
-    if(pointer == NULL)
+    if (pointer == NULL)
     {
         return NULL;
     }

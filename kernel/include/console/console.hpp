@@ -19,7 +19,7 @@ public:
     void PutCharacter(char c);
     void Clear();
 
-    static KernelConsole *GetInstance();
+    static KernelConsole *GetInstance(bool createInstance = true);
 
 private:
     KernelConsole(KernelConsoleFont *font, KernelFrameBuffer *frameBuffer);

@@ -8,7 +8,7 @@ Timer::Timer()
 {
     this->elapsed = 0;
     this->timerPort = new InputOutputPort(0x40);
-    this->SetFrequency(200);
+    this->SetFrequency(120);
 }
 
 Timer *Timer::GetInstance()
@@ -27,7 +27,7 @@ void Timer::SetDivisor(uint16_t divisor)
     this->timerPort->Write((uint8_t)((divisor >> 8) & 0x00ff));
 }
 
-uint64_t Timer::GetFrequency()
+uint64_t Timer::GetFrequency() const
 {
     return BaseFrequency / divisor;
 }
@@ -39,12 +39,10 @@ void Timer::SetFrequency(uint64_t frequency)
 
 void Timer::Tick()
 {
-    this->elapsed += 1.0 / (double)GetFrequency();
+    this->elapsedTicks += 1;
 }
-uint64_t Timer::ElapsedTimeMilliseconds() {
-    return (uint64_t)(this->elapsed * 1000.0);
-}
-double Timer::ElapsedTime()
+
+uint64_t Timer::ElapsedTimeMilliseconds() const
 {
-    return this->elapsed;
+    return (uint64_t)((elapsedTicks * 1000) / this->GetFrequency());
 }

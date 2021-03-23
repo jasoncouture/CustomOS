@@ -10,7 +10,11 @@
 #include <panic.hpp>
 
 // Class members
-
+void InvalidateCache(uint64_t addr)
+{
+    asm volatile("invlpg (%0)" ::"r"(addr)
+                 : "memory");
+}
 VirtualAddressManager *VirtualAddressManager::KernelVirtualAddressManager = NULL;
 bool VirtualAddressManager::IsInitialized = false;
 
@@ -22,6 +26,7 @@ VirtualAddressManager::VirtualAddressManager()
     memset(rootEntryPage, 0, pageAllocator->PageSize());
     this->RootTable = (PageTableEntry *)rootEntryPage;
     this->FreeOnDestroy = true;
+    this->active = false;
 }
 
 VirtualAddressManager::VirtualAddressManager(PageTableEntry rootTable[512], bool freeOnDestory)
@@ -93,6 +98,10 @@ void VirtualAddressManager::Map(void *virtualAddress, void *physicalAddress, boo
     pageTableEntry->SetAddress((uint64_t)physicalAddress);
     pageTableEntry->SetFlag(PageTableEntryFlag::Writable, writable);
     pageTableEntry->SetFlag(PageTableEntryFlag::Present, true);
+    if (this->active)
+    {
+        InvalidateCache((uint64_t)virtualAddress);
+    }
 }
 
 void *VirtualAddressManager::GetPhysicalAddress(void *virtualAddress)
@@ -115,6 +124,7 @@ void VirtualAddressManager::Activate()
     asm("mov %0, %%cr3"
         :
         : "r"(this->RootTable));
+    this->active = true;
 }
 
 VirtualAddressManager *VirtualAddressManager::GetKernelVirtualAddressManager()

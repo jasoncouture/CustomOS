@@ -15,6 +15,7 @@ class VirtualAddressManager
         static VirtualAddressManager* GetKernelVirtualAddressManager();
     private:
         PageTableEntry* RootTable;
+        bool active;
         bool FreeOnDestroy;
         static bool IsInitialized;
         static VirtualAddressManager* KernelVirtualAddressManager;

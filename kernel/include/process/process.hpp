@@ -13,11 +13,15 @@
 #endif
 
 #ifndef DEFAULT_STACK_SIZE
-#define DEFAULT_STACK_SIZE 0x10000
+#define DEFAULT_STACK_SIZE 0x100000
 #endif
+
+#define FPU_STATE_SIZE_BYTES 544
+
 
 enum ProcessState
 {
+    Created,
     Ready,
     Suspended,
     Running,
@@ -33,8 +37,8 @@ extern "C"
 class Process
 {
 public:
-    Process(const char* name = NULL);
-    Process(VirtualAddressManager *, const char* name = NULL);
+    Process(const char *name = NULL);
+    Process(VirtualAddressManager *, const char *name = NULL);
     int64_t GetProcessId() { return this->processId; }
     static void Yield()
     {
@@ -66,21 +70,25 @@ public:
     void RestoreFloatingPointState();
     void Finalize();
     void Reap();
+    static void SetIdle(Process *process) { Process::idle = process; }
+    static Process* GetIdle() { return Process::idle; }
     InterruptStack GetInterruptStack();
     void SetInterruptStack(InterruptStack interruptStack);
     ProcessState State;
+    uint8_t FloatingPointStateBase[FPU_STATE_SIZE_BYTES];
     void *FloatingPointState;
     void *Stack;
-    const char* GetName() const { return this->name == NULL ? "" : this->name; }
+    const char *GetName() const { return this->name == NULL ? "" : this->name; }
     uint64_t ExitCode;
 
 private:
     InterruptStack interruptStack;
     static Process *current;
     static Process *next;
+    static Process *idle;
     static LinkedList<Process *> *processes;
-    const char* name;
-    void *StackBase;
+    const char *name;
+    uint8_t StackBase[DEFAULT_STACK_SIZE];
     VirtualAddressManager *virtualAddressManager;
     int64_t processId;
 };

@@ -64,7 +64,18 @@ void memset(void *memoryLocation, uint8_t value, size_t size)
         buffer[i] = value;
 }
 
-void memcopy(uint64_t *source, uint64_t *destination, size_t size)
+void _memcopy8(uint8_t *source, uint8_t *destination, size_t size)
+{
+    for (size_t x = 0; x < size; x++)
+        destination[x] = source[x];
+}
+
+void memcopy8(void *source, void *destination, size_t size)
+{
+    _memcopy8((uint8_t *)source, (uint8_t *)destination, size);
+}
+
+void _memcopy64(uint64_t *source, uint64_t *destination, size_t size)
 {
     auto remainder = size % sizeof(uint64_t);
 
@@ -74,10 +85,10 @@ void memcopy(uint64_t *source, uint64_t *destination, size_t size)
         destination[offset] = source[offset];
     }
     if (remainder)
-        memcopy(((uint8_t *)source + (size - remainder)), ((uint8_t *)destination + (size - remainder)), remainder);
+        _memcopy8(((uint8_t *)source + (size - remainder)), ((uint8_t *)destination + (size - remainder)), remainder);
 }
 
-void memcopy(uint32_t *source, uint32_t *destination, size_t size)
+void _memcopy32(uint32_t *source, uint32_t *destination, size_t size)
 {
     auto remainder = size % sizeof(uint32_t);
 
@@ -88,28 +99,27 @@ void memcopy(uint32_t *source, uint32_t *destination, size_t size)
     }
 
     if (remainder)
-        memcopy(((uint8_t *)source + (size - remainder)), ((uint8_t *)destination + (size - remainder)), remainder);
+        _memcopy8(((uint8_t *)source + (size - remainder)), ((uint8_t *)destination + (size - remainder)), remainder);
 }
 
-inline void memcopy(uint8_t *source, uint8_t *destination, size_t size)
+void memcopy32(void *source, void *destination, size_t size)
 {
-    for (size_t x = 0; x < size; x++)
-        destination[x] = source[x];
+    _memcopy32((uint32_t*)source, (uint32_t*)destination, size);
 }
 
 void memcopy(void *source, void *destination, size_t size)
 {
     if (size >= sizeof(uint64_t))
     {
-        memcopy((uint64_t *)source, (uint64_t *)destination, size);
+        _memcopy64((uint64_t *)source, (uint64_t *)destination, size);
         return;
     }
 
     if (size >= sizeof(uint32_t))
     {
-        memcopy((uint32_t *)source, (uint32_t *)destination, size);
+        _memcopy32((uint32_t *)source, (uint32_t *)destination, size);
         return;
     }
 
-    memcopy((uint8_t *)source, (uint8_t *)destination, size);
+    _memcopy8((uint8_t *)source, (uint8_t *)destination, size);
 }

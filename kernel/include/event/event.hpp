@@ -1,25 +1,28 @@
 #pragma once
 #include <stdint.h>
 
-enum EventType {
-    TimerTick = 0,
-    KernelEvent = 1,
-    KeyboardScanCode = 2,
-    Keyboard = 3,
-    KeyboardCharacterInput = 4,
-    KeyboardKeyAvailable = 5,
-    KeyboardBufferFull = 6,
-    ContextSwitch = 7
+enum EventType
+{
+    Null,
+    TimerTick,
+    KernelEvent ,
+    KeyboardScanCode,
+    Keyboard,
+    KeyboardCharacterInput,
+    KeyboardKeyAvailable,
+    KeyboardBufferFull,
+    ContextSwitch
 };
 
-class Event 
+struct Event
 {
-    public:
-        uint64_t EventId() { return this->eventType; }
-        virtual uint64_t EventData() { return this->eventData; }
-        Event(EventType eventType, uint64_t eventData = 0);
+public:
+    uint64_t EventId() { return this->eventType; }
+    virtual uint64_t EventData() { return this->eventData; }
+    Event(EventType eventType, uint64_t eventData = 0);
+    Event() : Event(EventType::Null, 0ul) {}
 
-    private:
-        EventType eventType;
-        uint64_t eventData;
+private:
+    EventType eventType;
+    uint64_t eventData;
 };

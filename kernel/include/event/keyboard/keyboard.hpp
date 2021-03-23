@@ -105,6 +105,6 @@ struct KeyboardEventData
     char Character;
 };
 
-void KeyboardScanCodeEvent(Event* event);
+void KeyboardScanCodeEvent(Event event);
 bool CharacterAvailable();
 char ReadNextCharacter();

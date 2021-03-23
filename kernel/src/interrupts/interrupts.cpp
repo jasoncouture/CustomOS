@@ -34,21 +34,12 @@ Process *ProcessDispatchEnd(InterruptStack *frame)
     auto currentProcess = Process::Current();
     auto nextProcess = Process::Next();
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
-    nextProcess->State = ProcessState::Running;
-    eventLoop->Publish(new Event(EventType::ContextSwitch));
-    nextProcess->RestoreFloatingPointState();
+    if (nextProcess->State != ProcessState::Created)
+        nextProcess->RestoreFloatingPointState();
     nextProcess->RestoreProcessState(frame);
     nextProcess->Activated();
     nextProcess->State = ProcessState::Running;
-    auto processList = *Process::GetProcessList();
-    for (auto process : processList)
-    {
-        if (process->GetProcessId() != 0)
-            continue;
-        process->Activate();
-        break;
-    }
-
+    Process::GetIdle()->Activate();
     return nextProcess;
 }
 
@@ -58,9 +49,37 @@ void ProcessDispatch(InterruptStack *frame)
     ProcessDispatchEnd(frame);
 }
 
+static inline void flush_tlb(unsigned long addr)
+{
+    asm volatile("invlpg (%0)" ::"r"(addr)
+                 : "memory");
+}
+
 extern "C" void Interrupt_PageFaultHandler(struct InterruptStack *frame, size_t isr)
 {
-    char buffer[1024];
+    ProcessDispatchStart(frame);
+    if (frame->error_code & 0x04) // Was this triggered by the kernel?
+    {
+        // Yes.
+        if (!(frame->error_code & 0x01)) // Is the page not-present?
+        {
+            // The page is not present.
+            if (frame->cr2 & ~0xfffull) //mask out the lower 12 bits, and check the value. If this results in zero, it's a null pointer access.
+            {
+                // If it's not the zero page, was it supposed to be present?
+                auto virtualAddressManager = Process::Current()->GetVirtualAddressManager();
+                auto virtualAddress = (void *)frame->cr2;
+                auto pageTableEntry = virtualAddressManager->GetPageTableEntry(virtualAddress, false);
+                if (pageTableEntry != NULL && pageTableEntry->GetFlag(PageTableEntryFlag::Present))
+                {
+                    // Invalidate the TLB for this address.
+                    flush_tlb(frame->cr2);
+                    ProcessDispatchEnd(frame);
+                    return;
+                }
+            }
+        }
+    }
     kPanic("PAGE FAULT", isr, frame);
 }
 
@@ -84,7 +103,7 @@ extern "C" void Interrupt_KeyboardInput(struct InterruptStack *frame, size_t isr
     }
     uint8_t scanCode = KeyboardPort->Read();
     EndPicInterruptPrimary();
-    eventLoop->Publish(new Event(EventType::KeyboardScanCode, scanCode));
+    eventLoop->Publish(Event(EventType::KeyboardScanCode, scanCode));
 }
 
 extern "C" void Interrupt_Syscall(struct InterruptStack *frame, size_t isr)
@@ -109,9 +128,9 @@ extern "C" void Interrupt_AssertionFailed(struct InterruptStack *frame, size_t i
 
 extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
 {
+    ProcessDispatchStart(frame);
     static Kernel::Events::EventLoop *eventLoop = NULL;
     static Kernel::Timer *timer = NULL;
-
     if (timer == NULL)
     {
         timer = Kernel::Timer::GetInstance();
@@ -121,17 +140,7 @@ extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
     {
         eventLoop = Kernel::Events::EventLoop::GetInstance();
     }
-    eventLoop->Publish(new Event(EventType::TimerTick, timer->ElapsedTimeMilliseconds()));
+    eventLoop->Publish(Event(EventType::TimerTick));
     EndPicInterruptPrimary();
-    ProcessDispatch(frame);
-}
-
-void DisableInterrupts()
-{
-    asm volatile("cli");
-}
-
-void EnableInterrupts()
-{
-    asm volatile("sti");
+    ProcessDispatchEnd(frame);
 }

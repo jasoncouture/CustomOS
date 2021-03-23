@@ -4,14 +4,21 @@
 
 extern "C" void _putchar(char character)
 {
-    KernelConsole::GetInstance()->PutCharacter(character);
+    static KernelConsole *console = NULL;
+    if (console == NULL)
+    {
+        console = KernelConsole::GetInstance(false);
+        if (console == NULL)
+            return;
+    }
+    console->PutCharacter(character);
     KernelFrameBuffer::GetInstance()->Update();
 }
 
-KernelConsole *KernelConsole::GetInstance()
+KernelConsole *KernelConsole::GetInstance(bool createInstance)
 {
     static KernelConsole *kernelConsole = NULL;
-    if (kernelConsole == NULL)
+    if (kernelConsole == NULL && createInstance)
     {
         kernelConsole = new KernelConsole(KernelConsoleFont::GetInstance(), KernelFrameBuffer::GetInstance());
     }

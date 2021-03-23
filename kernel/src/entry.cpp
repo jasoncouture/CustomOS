@@ -33,40 +33,48 @@ void WriteDebugData(const char *description, uint64_t value, uint64_t lineNumber
     // const char *numericString = hex ? kToHexString(value) : kToString(value);
     // font->DrawStringAt(numericString, font->GetCharacterPixelWidth() * 30, font->GetCharacterPixelHeight() * lineNumber);
 }
-const double interval = 1.0 / 60.0;
-void OnEvent(Event *event)
-{
-    static uint64_t eventCount = 0;
-    static uint64_t eventCountAtLastScreenUpdate;
-    static uint64_t maxPending = 0;
-    static double lastScreenUpdate = 0.0;
-    static Kernel::Events::EventLoop *eventLoop = NULL;
-    if (eventLoop == NULL)
-        eventLoop = Kernel::Events::EventLoop::GetInstance();
-    auto pendingEvents = eventLoop->Pending();
-    if (pendingEvents > maxPending)
-        maxPending = pendingEvents;
-    eventCount++;
 
+const double interval = 1.0 / 60.0;
+
+char chars[4] = {
+    '/',
+    '-',
+    '\\',
+    '|'};
+
+uint64_t index = 0;
+void OnEvent(Event event)
+{
+    static KernelConsole *console = NULL;
+    static Kernel::Timer *timer = NULL;
+    static Memory *memory = NULL;
+    static PageAllocator *pageAllocator = NULL;
+    static KernelFrameBuffer *frameBuffer = NULL;
+    if (console == NULL)
+        console = KernelConsole::GetInstance();
+    if (timer == NULL)
+        timer = Kernel::Timer::GetInstance();
+    if (pageAllocator == NULL)
+        pageAllocator = PageAllocator::GetInstance();
+    if (memory == NULL)
+        memory = Memory::GetInstance();
+    if (frameBuffer == NULL)
+        frameBuffer = KernelFrameBuffer::GetInstance();
+    auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
+    console->SetCursorPosition(0, 0);
+    printf("%d MiB of memory total\r\n", memory->Size() / (1024 * 1024));
+    printf("Free memory: %d MiB\r\n", freeMemoryInfo.BytesFree / (1024 * 1024));
+    printf("Reserved memory: %d MiB\r\n", freeMemoryInfo.BytesReserved / (1024 * 1024));
+    printf("Used memory: %d MiB\r\n", freeMemoryInfo.BytesUsed / (1024 * 1024));
     DispatchKernelEvent(event);
-    if (event->EventId() == EventType::TimerTick)
-    {
-        auto currentTime = Kernel::Timer::GetInstance()->ElapsedTime();
-        if (currentTime - lastScreenUpdate >= interval)
-        {
-            auto eventsSinceLastUpdate = eventCount - eventCountAtLastScreenUpdate;
-            eventCountAtLastScreenUpdate = eventCount;
-            WriteDebugData("Event:", event->EventId(), 2);
-            WriteDebugData("Event Data:", event->EventData(), 3);
-            WriteDebugData("Timestamp (MS):", (uint64_t)(Kernel::Timer::GetInstance()->ElapsedTime() * 1000), 4);
-            WriteDebugData("Timestamp (Seconds):", (uint64_t)(Kernel::Timer::GetInstance()->ElapsedTime()), 5);
-            WriteDebugData("Pending events:", pendingEvents, 6);
-            WriteDebugData("Max Pending events:", maxPending, 7);
-            WriteDebugData("Events:", eventCount, 8);
-            WriteDebugData("Events per second:", (uint64_t)((double)eventsSinceLastUpdate / (currentTime - lastScreenUpdate)), 9);
-            lastScreenUpdate = currentTime;
-        }
-    }
+
+    index++;
+    auto selectedChar = chars[index % 4];
+    console->SetCursorPosition(0, 10);
+    printf("%c\r\n%d\r\n", selectedChar, timer->ElapsedTimeMilliseconds());
+    printf("EventID: %d, Data: %d    \r\n", event.EventId(), event.EventData());
+    printf("Events seen so far: %d\r\n", index);
+    printf("Events pending: %d    \r\n", Kernel::Events::EventLoop::GetInstance()->Pending());
 }
 
 int KernelEventLoop()
@@ -79,51 +87,43 @@ int KernelEventLoop()
 
 void kMain(KernelParameters *kernelParameters)
 {
-    auto pageAllocator = PageAllocator::GetInstance();
-    auto memory = Memory::GetInstance();
-    auto bitmap = pageAllocator->GetBitmap();
-    auto freeMemoryInfo = pageAllocator->GetFreeMemoryInformation();
-    printf("Booting with %d MiB of memory total\r\n", memory->Size() / (1024 * 1024));
-    printf("Free memory: %d MiB\r\n", freeMemoryInfo.BytesFree / (1024 * 1024));
-    printf("Reserved memory: %d MiB\r\n", freeMemoryInfo.BytesReserved / (1024 * 1024));
-    auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "EventLoop");
-    {
-        eventLoopProcess->Initialize((void *)KernelEventLoop);
-        Process::Add(eventLoopProcess);
-        printf("Event loop thread scheduled, Process ID: %d\r\n", eventLoopProcess->GetProcessId());
-    }
 
+    auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "EventLoop");
+
+    eventLoopProcess->Initialize((void *)KernelEventLoop);
+    Process::Add(eventLoopProcess);
+    //printf("Event loop thread scheduled, Process ID: %d\r\n", eventLoopProcess->GetProcessId());
 
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
-    eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event *event) {
-        printf("WARN: Keyboard buffer is full\r\n");
+    eventLoop->SetHandler(EventType::KeyboardBufferFull, [](Event event) {
+        //printf("WARN: Keyboard buffer is full\r\n");
     });
 
-
-    printf("Event handlers attached. Entering scheduler loop\r\n");
+    //printf("Event handlers attached.\r\n");
+    //printf("Processes:\r\n");
     uint64_t counter = 0;
     while (true)
     {
         // Very, VERY simple scheduler.
         auto processList = *Process::GetProcessList();
         bool didSchedule = false;
+        DisableInterrupts();
         for (auto process : processList)
         {
-            if (process->GetProcessId() == 0)
-            {
-                //printf("Skipping idle process (PID 0)\r\n");
+            if (process->State != ProcessState::Ready && process->State != ProcessState::Created)
                 continue;
-            }
-            if (process->State != ProcessState::Ready)
-                continue;
+
             didSchedule = true;
             //printf("Scheduling process: %d (%s)\r\n", process->GetProcessId(), process->GetName());
             process->Activate();
             //double startTime = Kernel::Timer::GetInstance()->ElapsedTime();
+            EnableInterrupts();
             Process::Yield();
+            DisableInterrupts();
             //double timeTaken = Kernel::Timer::GetInstance()->ElapsedTime() - startTime;
             //printf("Control Returned to scheduler after %f seconds.\r\n", timeTaken);
         }
+        EnableInterrupts();
         if (!didSchedule)
         {
             //printf("Halting because no processes were scheduled. Will try again next interrupt.\r\n");

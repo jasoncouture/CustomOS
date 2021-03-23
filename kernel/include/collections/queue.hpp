@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <collections/ringbuffer.hpp>
 #include <locks/lock.hpp>
+#include <interrupts/interrupts.hpp>
 
 namespace Kernel::Collections
 {
@@ -20,13 +21,14 @@ namespace Kernel::Collections
         void Enqueue(T item);
         bool TryDequeue(T *item);
         bool IsEmpty();
-        uint64_t Count() {
+        uint64_t Count()
+        {
             return this->ringBuffer->Count();
         }
     };
 
     template <class T>
-    Queue<T>::Queue() : Queue<T>::Queue(512)
+    Queue<T>::Queue() : Queue<T>::Queue(8192)
     {
     }
 
@@ -81,7 +83,8 @@ namespace Kernel::Collections
     template <class T>
     bool Queue<T>::TryDequeue(T *item)
     {
-        if(!this->lock->TryAcquire()) return false;
+        if (!this->lock->TryAcquire())
+            return false;
         bool returnValue = this->ringBuffer->TryRead(item);
         this->lock->Unlock();
         return returnValue;

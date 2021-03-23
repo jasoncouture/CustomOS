@@ -20,3 +20,5 @@ class Memory
 
 void memset(void* memoryLocation, uint8_t value, size_t size);
 void memcopy(void* source, void* destination, size_t size);
+void memcopy8(void *source, void *destination, size_t size);
+void memcopy32(void *source, void *destination, size_t size);

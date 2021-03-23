@@ -131,26 +131,26 @@ void KeyboardEvent(KeyboardKey key, KeyboardKeyFlags flags)
         if (character != '\0')
         {
             auto eventLoop = Kernel::Events::EventLoop::GetInstance();
-            eventLoop->Publish(new Event(EventType::KeyboardCharacterInput, character));
+            eventLoop->Publish(Event(EventType::KeyboardCharacterInput, character));
             
             if (!bufferFull && GetCharacterBuffer()->TryWrite(character))
             {
                 bufferFull = false;
-                eventLoop->Publish(new Event(EventType::KeyboardKeyAvailable));
+                eventLoop->Publish(Event(EventType::KeyboardKeyAvailable));
             }
             else if (!bufferFull)
             {
                 bufferFull = true;
-                eventLoop->Publish(new Event(EventType::KeyboardBufferFull));
+                eventLoop->Publish(Event(EventType::KeyboardBufferFull));
             }
         }
     }
 }
 
-void KeyboardScanCodeEvent(Event *event)
+void KeyboardScanCodeEvent(Event event)
 {
     auto flags = KeyboardKeyFlags::Pressed;
-    auto scanCodeData = event->EventData();
+    auto scanCodeData = event.EventData();
     auto key = (KeyboardKey)scanCodeData;
     if (!(scanCodeData == KeyboardKey::Extended || scanCodeData == KeyboardKey::PausePrefix) && scanCodeData > 0x80)
     {

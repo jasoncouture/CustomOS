@@ -25,6 +25,7 @@ SOFTWARE.
 
 struct InterruptStack
 {
+	uint64_t	cr2;
 	uint64_t	cr3;
 	uint64_t	rax;
 	uint64_t    rbx;

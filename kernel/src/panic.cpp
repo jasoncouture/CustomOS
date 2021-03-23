@@ -54,6 +54,7 @@ void kPanic(const char *message, size_t isr, InterruptStack *interruptFrame)
     WritePanicString(frameBuffer, consoleFont, "Debug Info", 1);
     snprintf(panicMessage, 8191, "CR2: %016llx, RIP: %016llx, Error Code: %d", cr2_state, interruptFrame->rip, interruptFrame->error_code);
     WritePanicString(frameBuffer, consoleFont, panicMessage, 2);
+    frameBuffer->SwapBuffers();
     __HALT();
 }
 
@@ -70,5 +71,6 @@ void kPanic(const char *message)
     WritePanicString(frameBuffer, consoleFont, "Whoops, something has gone horribly wrong...", targetRow - 1);
     WritePanicString(frameBuffer, consoleFont, "Because Fuck you. That's why.", targetRow);
     WritePanicString(frameBuffer, consoleFont, message, targetRow + 1);
+    frameBuffer->SwapBuffers();
     __HALT();
 }
