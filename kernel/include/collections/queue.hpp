@@ -42,12 +42,14 @@ namespace Kernel::Collections
     template <class T>
     void Queue<T>::Enqueue(T item)
     {
-        this->lock->SpinWait();
+        
         while (!this->ringBuffer->TryWrite(item))
         {
+            this->lock->SpinWait();
             this->Grow();
+            this->lock->Unlock();
         }
-        this->lock->Unlock();
+        
     }
 
     template <class T>

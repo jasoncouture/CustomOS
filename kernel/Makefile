@@ -8,10 +8,10 @@ CC = gcc
 ASMC = nasm
 LD = ld
 
-CFLAGS = -ffreestanding -fshort-wchar -fno-inline -fno-exceptions -mno-red-zone -mgeneral-regs-only
+CFLAGS = -ffreestanding -fshort-wchar -fno-inline -fno-exceptions -mno-red-zone
 CFLAGS += -fstack-protector-strong -fno-unwind-tables -g -Wno-address-of-packed-member
 CFLAGS += -Wundef -Wcast-qual -Wwrite-strings -Wimplicit-fallthrough -Wno-nonnull-compare 
-CFLAGS += -Wno-expansion-to-defined -I../common/include -Iinclude -DPRINTF_INCLUDE_CONFIG_H
+CFLAGS += -Wno-expansion-to-defined -I../common/include -Iinclude
 CXXFLAGS = $(CFLAGS)
 CXXFLAGS += -Wno-deprecated-copy -fno-rtti
 LDFLAGS = -T $(LDS) -static -Bsymbolic -nostdlib --no-dynamic-linker

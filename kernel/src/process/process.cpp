@@ -2,13 +2,12 @@
 #include <memory/heap.hpp>
 #include <stdint.h>
 
-
-
 Process *Process::current = NULL;
 Process *Process::next = NULL;
 Process *Process::idle = NULL;
 LinkedList<Process *> *Process::processes = NULL;
 
+extern "C" void InitializeFloatingPointUnit();
 
 int64_t Process::NextId()
 {
@@ -43,7 +42,7 @@ Process::Process(VirtualAddressManager *virtualAddressManager, const char *name)
     this->interruptStack = InterruptStack();
     this->virtualAddressManager = virtualAddressManager;
     auto offset = ((uint64_t)this->FloatingPointStateBase) % 16;
-    this->FloatingPointState = (void *)(this->FloatingPointStateBase + offset);
+    this->FloatingPointState = (void *)(this->FloatingPointStateBase + (16 - offset));
     this->State = ProcessState::Created;
     this->name = "";
     if (name != NULL)
@@ -54,13 +53,13 @@ Process::Process(VirtualAddressManager *virtualAddressManager, const char *name)
 
 void Process::Initialize(void *entrypoint, uint64_t stackSize, uint64_t flags)
 {
-    
+
     InterruptStack initialFrame = this->interruptStack;
     initialFrame.ss = 0x10;
     initialFrame.cs = 0x08;
     initialFrame.rip = (uint64_t)(void *)ProcessStartTrampoline;
     initialFrame.rax = (uint64_t)entrypoint;
-    initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + DEFAULT_STACK_SIZE);
+    initialFrame.rbp = (uint64_t)((uint8_t *)this->StackBase + (DEFAULT_STACK_SIZE - 32));
     initialFrame.rsp = initialFrame.rbp;
     initialFrame.cr3 = (uint64_t)this->virtualAddressManager->GetPageTableAddress();
     initialFrame.rflags = flags;
@@ -80,22 +79,36 @@ void Process::SetInterruptStack(InterruptStack interruptStack)
 void Process::SetProcessState(InterruptStack *current)
 {
     this->interruptStack = *current;
+    this->SaveFloatingPointState();
 }
 
+void Process::InitializeProcess()
+{
+        InitializeFloatingPointUnit();
+        this->SaveFloatingPointState();
+}
 void Process::RestoreProcessState(InterruptStack *current)
 {
+    if (this->State == ProcessState::Created)
+    {
+        this->InitializeProcess();
+    }
+    else
+    {
+        this->RestoreFloatingPointState();
+    }
     *current = this->interruptStack;
 }
 
 void Process::SaveFloatingPointState()
 {
-    asm volatile("fnsave %0"
+    asm volatile("fxsave %0"
                  : "=m"(*((uint8_t *)this->FloatingPointState)));
 }
 
 void Process::RestoreFloatingPointState()
 {
-    asm volatile("frstor %0"
+    asm volatile("fxrstor %0"
                  :
                  : "m"(*((uint8_t *)this->FloatingPointState)));
 }

@@ -23,7 +23,6 @@ Process *ProcessDispatchStart(InterruptStack *frame)
     if (currentProcess == NULL)
         return NULL;
     currentProcess->SetProcessState(frame);
-    currentProcess->SaveFloatingPointState();
     if (currentProcess->State == ProcessState::Running)
         currentProcess->State = ProcessState::Ready;
     return currentProcess;
@@ -31,11 +30,7 @@ Process *ProcessDispatchStart(InterruptStack *frame)
 
 Process *ProcessDispatchEnd(InterruptStack *frame)
 {
-    auto currentProcess = Process::Current();
     auto nextProcess = Process::Next();
-    auto eventLoop = Kernel::Events::EventLoop::GetInstance();
-    if (nextProcess->State != ProcessState::Created)
-        nextProcess->RestoreFloatingPointState();
     nextProcess->RestoreProcessState(frame);
     nextProcess->Activated();
     nextProcess->State = ProcessState::Running;
@@ -129,18 +124,18 @@ extern "C" void Interrupt_AssertionFailed(struct InterruptStack *frame, size_t i
 extern "C" void Interrupt_Timer(struct InterruptStack *frame, size_t isr)
 {
     ProcessDispatchStart(frame);
-    static Kernel::Events::EventLoop *eventLoop = NULL;
+    //static Kernel::Events::EventLoop *eventLoop = NULL;
     static Kernel::Timer *timer = NULL;
     if (timer == NULL)
     {
         timer = Kernel::Timer::GetInstance();
     }
     timer->Tick();
-    if (eventLoop == NULL)
-    {
-        eventLoop = Kernel::Events::EventLoop::GetInstance();
-    }
-    eventLoop->Publish(Event(EventType::TimerTick));
+    // if (eventLoop == NULL)
+    // {
+    //     eventLoop = Kernel::Events::EventLoop::GetInstance();
+    // }
+    //eventLoop->Publish(Event(EventType::TimerTick));
     EndPicInterruptPrimary();
     ProcessDispatchEnd(frame);
 }

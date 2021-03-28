@@ -16,7 +16,7 @@
 #define DEFAULT_STACK_SIZE 0x100000
 #endif
 
-#define FPU_STATE_SIZE_BYTES 544
+#define FPU_STATE_SIZE_BYTES 528
 
 
 enum ProcessState
@@ -82,6 +82,7 @@ public:
     uint64_t ExitCode;
 
 private:
+    void InitializeProcess();
     InterruptStack interruptStack;
     static Process *current;
     static Process *next;

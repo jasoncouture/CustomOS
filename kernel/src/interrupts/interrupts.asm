@@ -5,10 +5,12 @@ EXTERN InterruptStatus
 
 DisableInterrupts:
     cli
+    nop
     ret
 
 EnableInterrupts:
     sti
+    nop
     ret
 
 InterruptStatus:

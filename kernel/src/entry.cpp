@@ -91,7 +91,7 @@ void kMain(KernelParameters *kernelParameters)
     auto eventLoopProcess = new Process(VirtualAddressManager::GetKernelVirtualAddressManager(), "EventLoop");
 
     eventLoopProcess->Initialize((void *)KernelEventLoop);
-    Process::Add(eventLoopProcess);
+    //Process::Add(eventLoopProcess);
     //printf("Event loop thread scheduled, Process ID: %d\r\n", eventLoopProcess->GetProcessId());
 
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
@@ -102,6 +102,7 @@ void kMain(KernelParameters *kernelParameters)
     //printf("Event handlers attached.\r\n");
     //printf("Processes:\r\n");
     uint64_t counter = 0;
+    auto console = KernelConsole::GetInstance();
     while (true)
     {
         // Very, VERY simple scheduler.
@@ -114,23 +115,20 @@ void kMain(KernelParameters *kernelParameters)
                 continue;
 
             didSchedule = true;
-            //printf("Scheduling process: %d (%s)\r\n", process->GetProcessId(), process->GetName());
+            auto currentPosition = console->GetCursorPosition();
+            console->SetCursorPosition(0, 0);
+            double elapsedSeconds = (double)Kernel::Timer::GetInstance()->ElapsedTimeMilliseconds() / 1000.0;
+            printf("Uptime: %f seconds\r\n", elapsedSeconds);
+            console->SetCursorPosition(currentPosition.X, currentPosition.Y);
             process->Activate();
-            //double startTime = Kernel::Timer::GetInstance()->ElapsedTime();
             EnableInterrupts();
             Process::Yield();
             DisableInterrupts();
-            //double timeTaken = Kernel::Timer::GetInstance()->ElapsedTime() - startTime;
-            //printf("Control Returned to scheduler after %f seconds.\r\n", timeTaken);
         }
         EnableInterrupts();
         if (!didSchedule)
         {
-            //printf("Halting because no processes were scheduled. Will try again next interrupt.\r\n");
-            //double startTime = Kernel::Timer::GetInstance()->ElapsedTime();
             asm("hlt");
-            //double timeTaken = Kernel::Timer::GetInstance()->ElapsedTime() - startTime;
-            //printf("Halted for %f seconds\r\n", timeTaken);
         }
     }
 }

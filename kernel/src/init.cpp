@@ -128,7 +128,7 @@ void kInitKernelProcess(KernelParameters *kernelParameters)
     kernelProcess->SetInterruptStack(stackFrame);
     kernelProcess->Activate(); // We do this here to set the next process.
     // We no longer set the current process with Activated so that the boot stack gets tossed out.
-    kernelProcess->State = ProcessState::Running;
+    kernelProcess->State = ProcessState::Created;
     Process::Add(kernelProcess);
     Process::SetIdle(kernelProcess);
 }
@@ -140,12 +140,6 @@ void SwapBuffers()
     auto eventLoop = Kernel::Events::EventLoop::GetInstance();
     while (true)
     {
-        counter = counter + 1 % 100;
-        if (counter != 0 && eventLoop->Pending() > 0)
-        {
-            Process::Yield();
-            continue;
-        }
         if (frameBuffer->NeedsBufferSwap())
         {
             frameBuffer->SwapBuffers();
@@ -178,7 +172,7 @@ extern "C" void __entry(KernelParameters *kernelParameters)
     KernelConsole::GetInstance()->Clear();
     kInitKernelProcess(kernelParameters);
     kInitDoubleBufferProcess(kernelParameters);
-    Kernel::Timer::GetInstance()->SetFrequency(100);
+    Kernel::Timer::GetInstance()->SetFrequency(60);
     EnableInterrupts();
     Process::Yield();
     // We should never reach here, because we've abandoned this process.
